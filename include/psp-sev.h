@@ -161,13 +161,13 @@ struct sev_user_data_get_id {
  *
  * @binary_address: Binary buffer address
  * @binary_size: Size of the binary in bytes
- * @ccx_id: The CCX ID to load the binary on
+ * @ccd_id: The CCD ID to load the binary on
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_load_bin {
     __u64 binary_address;          /* In */
     __u32 binary_size;             /* In */
-    __u32 ccx_id;                  /* In */
+    __u32 ccd_id;                  /* In */
     __s32 status;                  /* Out */
 } __attribute__((packed));
 
@@ -175,28 +175,28 @@ struct sev_user_data_bin_ldr_load_bin {
  * struct sev_user_data_bin_ldr_exec_bin - BIN_LOADER_EXC_BIN command parameters
  *
  * @req_address: Request buffer address
- * @ccx_id: The CCX ID to execute the binary on
+ * @ccd_id: The CCD ID to execute the binary on
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_exec_bin {
     __u64 req_address;             /* In */
-    __u32 ccx_id;                  /* In */
+    __u32 ccd_id;                  /* In */
     __s32 status;                  /* Out */
 } __attribute__((packed));
 
 /**
  * struct sev_user_data_bin_ldr_smn_read - BIN_LOADER_SMN_READ/BIN_LOADER_SMN_WRITE command parameters
  *
- * @ccx_id: The CCX ID to execute the request on
- * @ccx_tgt_id: The target CCX to read a register from
+ * @ccd_id: The CCD ID to execute the request on
+ * @ccd_tgt_id: The target CCD to read a register from
  * @smn_addr: SMN address to operate on
  * @size: Value size (1, 2, 4 or 8)
  * @value: Contains the value on successful read or value to write
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_smn_rw {
-    __u32 ccx_id;                  /* In */
-    __u32 ccx_id_tgt;              /* In */
+    __u32 ccd_id;                  /* In */
+    __u32 ccd_id_tgt;              /* In */
     __u32 smn_addr;                /* In */
     __u32 size;                    /* In */
     __u64 value;                   /* Out */
@@ -206,14 +206,14 @@ struct sev_user_data_bin_ldr_smn_rw {
 /**
  * struct sev_user_data_bin_ldr_psp_rw - BIN_LOADER_PSP_READ/BIN_LOADER_PSP_WRITE command parameters
  *
- * @ccx_id: The CCX ID to execute the request on
+ * @ccd_id: The CCD ID to execute the request on
  * @psp_addr: PSP address to read/write from/to
  * @buf: Userspace buffer to read the data into or write data from
  * @size: Number of bytes to copy
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_psp_rw {
-    __u32 ccx_id;                  /* In */
+    __u32 ccd_id;                  /* In */
     __u32 psp_addr;                /* In */
     __u64 buf;                     /* In */
     __u32 size;                    /* In */
@@ -223,14 +223,14 @@ struct sev_user_data_bin_ldr_psp_rw {
 /**
  * struct sev_user_data_bin_ldr_psp_x86_rw - SEV_BIN_LDR_PSP_X86_READ/SEV_BIN_LDR_PSP_X86_WRITE command parameters
  *
- * @ccx_id: The CCX ID to execute the request on
+ * @ccd_id: The CCD ID to execute the request on
  * @size: Number of bytes to copy
  * @x86_phys: x86 physical address to read/write from/to
  * @buf: Userspace buffer to read the data into or write data from
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_psp_x86_rw {
-    __u32 ccx_id;                  /* In */
+    __u32 ccd_id;                  /* In */
     __u32 size;                    /* In */
     __u64 x86_phys;                /* In */
     __u64 buf;                     /* In */
@@ -240,7 +240,7 @@ struct sev_user_data_bin_ldr_psp_x86_rw {
 /**
  * struct sev_user_data_bin_ldr_svc_call - BIN_LOADER_CALL_SVC command parameters
  *
- * @ccx_id: The CCX ID to execute the request on
+ * @ccd_id: The CCD ID to execute the request on
  * @syscall: The syscall to execute
  * @r0: R0 argument
  * @r1: R1 argument
@@ -250,7 +250,7 @@ struct sev_user_data_bin_ldr_psp_x86_rw {
  * @status: The status code returned by the request
  */
 struct sev_user_data_bin_ldr_svc_call {
-    __u32 ccx_id;                  /* In */
+    __u32 ccd_id;                  /* In */
     __u32 syscall;                 /* In */
     __u32 r0;                      /* In */
     __u32 r1;                      /* In */

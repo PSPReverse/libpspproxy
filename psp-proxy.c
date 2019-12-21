@@ -45,8 +45,8 @@ typedef struct PSPPROXYCTXINT
 {
     /** The file descriptor of the device proxying our calls. */
     int                             iFdDev;
-    /** The current CCX ID set. */
-    uint32_t                        idCcx;
+    /** The current CCD ID set. */
+    uint32_t                        idCcd;
 } PSPPROXYCTXINT;
 /** Pointer to an internal PSP proxy context. */
 typedef PSPPROXYCTXINT *PPSPPROXYCTXINT;
@@ -92,7 +92,7 @@ int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice)
         if (pThis != NULL)
         {
             pThis->iFdDev = iFd;
-            pThis->idCcx  = 0;
+            pThis->idCcd  = 0;
             *phCtx = pThis;
             return 0;
         }
@@ -118,17 +118,17 @@ void PSPProxyCtxDestroy(PSPPROXYCTX hCtx)
 }
 
 
-int PSPProxyCtxPspCcxSet(PSPPROXYCTX hCtx, uint32_t idCcx)
+int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd)
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
     /** @todo Check that the ID is in range. */
-    pThis->idCcx = idCcx;
+    pThis->idCcd = idCcd;
     return 0;
 }
 
 
-int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
+int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;
     struct sev_user_data_bin_ldr_smn_rw Req;
@@ -137,8 +137,8 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr,
         return -1;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
-    Req.ccx_id_tgt = idCcxTgt;
+    Req.ccd_id     = pThis->idCcd;
+    Req.ccd_id_tgt = idCcdTgt;
     Req.smn_addr   = uSmnAddr;
     Req.size       = cbVal;
     int rc = pspProxyCtxIoctl(pThis, SEV_BIN_LDR_SMN_READ, &Req, NULL);
@@ -168,7 +168,7 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr,
 }
 
 
-int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
+int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;
     struct sev_user_data_bin_ldr_smn_rw Req;
@@ -177,8 +177,8 @@ int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr
         return -1;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
-    Req.ccx_id_tgt = idCcxTgt;
+    Req.ccd_id     = pThis->idCcd;
+    Req.ccd_id_tgt = idCcdTgt;
     Req.smn_addr   = uSmnAddr;
     Req.size       = cbVal;
 
@@ -211,7 +211,7 @@ int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint3
     struct sev_user_data_bin_ldr_psp_rw Req;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
+    Req.ccd_id     = pThis->idCcd;
     Req.psp_addr   = uPspAddr;
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbRead;
@@ -226,7 +226,7 @@ int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf
     struct sev_user_data_bin_ldr_psp_rw Req;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
+    Req.ccd_id     = pThis->idCcd;
     Req.psp_addr   = uPspAddr;
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbWrite;
@@ -241,7 +241,7 @@ int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf
     struct sev_user_data_bin_ldr_psp_x86_rw Req;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
+    Req.ccd_id     = pThis->idCcd;
     Req.x86_phys   = PhysX86Addr;
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbRead;
@@ -256,7 +256,7 @@ int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void
     struct sev_user_data_bin_ldr_psp_x86_rw Req;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
+    Req.ccd_id     = pThis->idCcd;
     Req.x86_phys   = PhysX86Addr;
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbWrite;
@@ -271,7 +271,7 @@ int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0,
     struct sev_user_data_bin_ldr_svc_call Req;
 
     memset(&Req, 0, sizeof(Req));
-    Req.ccx_id     = pThis->idCcx;
+    Req.ccd_id     = pThis->idCcd;
     Req.syscall    = idxSyscall;
     Req.r0         = u32R0;
     Req.r1         = u32R1;

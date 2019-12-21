@@ -57,37 +57,37 @@ int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice);
 void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
 
 /**
- * Sets the CCX ID used as the operating environment (memory read/written target this particular CCX PSP address space).
+ * Sets the CCD ID used as the operating environment (memory read/written target this particular CCD PSP address space).
  *
  * @returns Status code.
  * @param   hCtx                    The PSP proxy context handle.
- * @param   idCcx                   The CCX id to set.
+ * @param   idCcd                   The CCD ID to set.
  */
-int PSPProxyCtxPspCcxSet(PSPPROXYCTX hCtx, uint32_t idCcx);
+int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
 
 /**
  * Reads the register at the given SMN address.
  *
  * @returns Status code.
  * @param   hCtx                    The PSP proxy context handle.
- * @param   idCcxTgt                The target CCX ID to access the register on.
+ * @param   idCcdTgt                The target CCD ID to access the register on.
  * @param   uSmnAddr                The SMN address/offset to access.
  * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
  * @param   pvVal                   Where to store the value on success.
  */
-int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
+int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
 
 /**
  * Writes to the register at the given SMN address.
  *
  * @returns Status code.
  * @param   hCtx                    The PSP proxy context handle.
- * @param   idCcxTgt                The target CCX ID to access the register on.
+ * @param   idCcdTgt                The target CCD ID to access the register on.
  * @param   uSmnAddr                The SMN address/offset to access.
  * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
  * @param   pvVal                   The value to write.
  */
-int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcxTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);
+int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);
 
 /**
  * Reads from the PSP address space at the given address.

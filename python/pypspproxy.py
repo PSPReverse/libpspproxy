@@ -20,11 +20,11 @@ class PSPProxy(object):
     def getLastRc(self):
         return self.rcLibLast;
 
-    def setCcx(self, idCcx):
-        self.rcLibLast = lib.PSPProxyCtxPspCcxSet(self.hCtx, idCcx);
+    def setCcd(self, idCcd):
+        self.rcLibLast = lib.PSPProxyCtxPspCcdSet(self.hCtx, idCcd);
         return self.rcLibLast;
 
-    def readSmn(self, idCcxTgt, uSmnAddr, cbVal):
+    def readSmn(self, idCcdTgt, uSmnAddr, cbVal):
         pVal = None;
         if cbVal == 1:
             pVal = ffi.new("uint8_t *");
@@ -37,13 +37,13 @@ class PSPProxy(object):
         else:
             return (-1, 0);
 
-        self.rcLibLast = lib.PSPProxyCtxPspSmnRead(self.hCtx, idCcxTgt, uSmnAddr, cbVal, pVal);
+        self.rcLibLast = lib.PSPProxyCtxPspSmnRead(self.hCtx, idCcdTgt, uSmnAddr, cbVal, pVal);
         if self.rcLibLast == 0:
             return (0, pVal[0]);
         else:
             return (self.rcLibLast, 0);
 
-    def writeSmn(self, idCcxTgt, uSmnAddr, cbVal, uVal):
+    def writeSmn(self, idCcdTgt, uSmnAddr, cbVal, uVal):
         pVal = None;
         if cbVal == 1:
             pVal = ffi.new("uint8_t *");
@@ -57,7 +57,7 @@ class PSPProxy(object):
             return -1;
 
         pVal[0] = uVal;
-        self.rcLibLast = lib.PSPProxyCtxPspSmnWrite(self.hCtx, idCcxTgt, uSmnAddr, cbVal, pVal);
+        self.rcLibLast = lib.PSPProxyCtxPspSmnWrite(self.hCtx, idCcdTgt, uSmnAddr, cbVal, pVal);
         if self.rcLibLast == 0:
             return 0;
         else:

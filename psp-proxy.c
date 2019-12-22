@@ -131,7 +131,7 @@ int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd)
 int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_smn_rw Req;
+    struct sev_user_data_psp_stub_smn_rw Req;
 
     if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
         return -1;
@@ -141,7 +141,7 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
     Req.ccd_id_tgt = idCcdTgt;
     Req.smn_addr   = uSmnAddr;
     Req.size       = cbVal;
-    int rc = pspProxyCtxIoctl(pThis, SEV_BIN_LDR_SMN_READ, &Req, NULL);
+    int rc = pspProxyCtxIoctl(pThis, SEV_PSP_STUB_SMN_READ, &Req, NULL);
     if (!rc)
     {
         switch (cbVal)
@@ -171,7 +171,7 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
 int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_smn_rw Req;
+    struct sev_user_data_psp_stub_smn_rw Req;
 
     if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
         return -1;
@@ -201,14 +201,14 @@ int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr
             assert(0);
     }
 
-    return pspProxyCtxIoctl(pThis, SEV_BIN_LDR_SMN_WRITE, &Req, NULL);
+    return pspProxyCtxIoctl(pThis, SEV_PSP_STUB_SMN_WRITE, &Req, NULL);
 }
 
 
 int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_psp_rw Req;
+    struct sev_user_data_psp_stub_psp_rw Req;
 
     memset(&Req, 0, sizeof(Req));
     Req.ccd_id     = pThis->idCcd;
@@ -216,14 +216,14 @@ int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint3
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbRead;
 
-    return pspProxyCtxIoctl(pThis, SEV_BIN_LDR_PSP_READ, &Req, NULL);
+    return pspProxyCtxIoctl(pThis, SEV_PSP_STUB_PSP_READ, &Req, NULL);
 }
 
 
 int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_psp_rw Req;
+    struct sev_user_data_psp_stub_psp_rw Req;
 
     memset(&Req, 0, sizeof(Req));
     Req.ccd_id     = pThis->idCcd;
@@ -231,14 +231,14 @@ int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbWrite;
 
-    return pspProxyCtxIoctl(pThis, SEV_BIN_LDR_PSP_WRITE, &Req, NULL);
+    return pspProxyCtxIoctl(pThis, SEV_PSP_STUB_PSP_WRITE, &Req, NULL);
 }
 
 
 int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_psp_x86_rw Req;
+    struct sev_user_data_psp_stub_psp_x86_rw Req;
 
     memset(&Req, 0, sizeof(Req));
     Req.ccd_id     = pThis->idCcd;
@@ -246,14 +246,14 @@ int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbRead;
 
-    return pspProxyCtxIoctl(pThis, SEV_BIN_LDR_PSP_X86_READ, &Req, NULL);
+    return pspProxyCtxIoctl(pThis, SEV_PSP_STUB_PSP_X86_READ, &Req, NULL);
 }
 
 
 int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_psp_x86_rw Req;
+    struct sev_user_data_psp_stub_psp_x86_rw Req;
 
     memset(&Req, 0, sizeof(Req));
     Req.ccd_id     = pThis->idCcd;
@@ -261,14 +261,14 @@ int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void
     Req.buf        = (__u64)pvBuf;
     Req.size       = cbWrite;
 
-    return pspProxyCtxIoctl(pThis, SEV_BIN_LDR_PSP_X86_WRITE, &Req, NULL);
+    return pspProxyCtxIoctl(pThis, SEV_PSP_STUB_PSP_X86_WRITE, &Req, NULL);
 }
 
 
 int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-    struct sev_user_data_bin_ldr_svc_call Req;
+    struct sev_user_data_psp_stub_svc_call Req;
 
     memset(&Req, 0, sizeof(Req));
     Req.ccd_id     = pThis->idCcd;
@@ -277,7 +277,7 @@ int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0,
     Req.r1         = u32R1;
     Req.r2         = u32R2;
     Req.r3         = u32R3;
-    int rc = pspProxyCtxIoctl(pThis, SEV_BIN_LDR_CALL_SVC, &Req, NULL);
+    int rc = pspProxyCtxIoctl(pThis, SEV_PSP_STUB_CALL_SVC, &Req, NULL);
     if (!rc)
         *pu32R0Return = Req.r0_return;
 

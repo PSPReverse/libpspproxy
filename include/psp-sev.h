@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Userspace interface for AMD Secure Encrypted Virtualization (SEV)
  * platform management commands.
@@ -6,12 +7,7 @@
  *
  * Author: Brijesh Singh <brijesh.singh@amd.com>
  *
- * SEV spec 0.14 is available at:
- * http://support.amd.com/TechDocs/55766_SEV-KM%20API_Specification.pdf
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * SEV API specification is available at: https://developer.amd.com/sev/
  */
 
 #ifndef __PSP_SEV_USER_H__
@@ -30,18 +26,18 @@ enum {
     SEV_PDH_GEN,
     SEV_PDH_CERT_EXPORT,
     SEV_PEK_CERT_IMPORT,
-    SEV_GET_ID,
+    SEV_GET_ID,    /* This command is deprecated, use SEV_GET_ID2 */
     SEV_GET_ID2,
 
-    SEV_BIN_LDR_LOAD_BIN = 0xf0,
-    SEV_BIN_LDR_EXEC_BIN,
-    SEV_BIN_LDR_SMN_READ,
-    SEV_BIN_LDR_SMN_WRITE,
-    SEV_BIN_LDR_PSP_READ,
-    SEV_BIN_LDR_PSP_WRITE,
-    SEV_BIN_LDR_PSP_X86_READ,
-    SEV_BIN_LDR_PSP_X86_WRITE,
-    SEV_BIN_LDR_CALL_SVC,
+    SEV_PSP_STUB_LOAD_BIN = 0xf0,
+    SEV_PSP_STUB_EXEC_BIN,
+    SEV_PSP_STUB_SMN_READ,
+    SEV_PSP_STUB_SMN_WRITE,
+    SEV_PSP_STUB_PSP_READ,
+    SEV_PSP_STUB_PSP_WRITE,
+    SEV_PSP_STUB_PSP_X86_READ,
+    SEV_PSP_STUB_PSP_X86_WRITE,
+    SEV_PSP_STUB_CALL_SVC,
     SEV_X86_SMN_READ,
     SEV_X86_SMN_WRITE,
     SEV_X86_MEM_ALLOC,
@@ -102,8 +98,6 @@ struct sev_user_data_status {
     __u32 guest_count;             /* Out */
 } __attribute__((packed));
 
-#define SEV_STATUS_FLAGS_CONFIG_ES    0x0100
-
 /**
  * struct sev_user_data_pek_csr - PEK_CSR command parameters
  *
@@ -146,7 +140,7 @@ struct sev_user_data_pdh_cert_export {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_get_id - GET_ID command parameters
+ * struct sev_user_data_get_id - GET_ID command parameters (deprecated)
  *
  * @socket1: Buffer to pass unique ID of first socket
  * @socket2: Buffer to pass unique ID of second socket
@@ -157,14 +151,24 @@ struct sev_user_data_get_id {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_load_bin - BIN_LOADER_LOAD_BIN command parameters
+ * struct sev_user_data_get_id2 - GET_ID command parameters
+ * @address: Buffer to store unique ID
+ * @length: length of the unique ID
+ */
+struct sev_user_data_get_id2 {
+    __u64 address;                /* In */
+    __u32 length;                /* In/Out */
+} __attribute__((packed));
+
+/**
+ * struct sev_user_data_psp_stub_load_bin - SEV_PSP_STUB_LOAD_BIN command parameters
  *
  * @binary_address: Binary buffer address
  * @binary_size: Size of the binary in bytes
  * @ccd_id: The CCD ID to load the binary on
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_load_bin {
+struct sev_user_data_psp_stub_load_bin {
     __u64 binary_address;          /* In */
     __u32 binary_size;             /* In */
     __u32 ccd_id;                  /* In */
@@ -172,20 +176,20 @@ struct sev_user_data_bin_ldr_load_bin {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_exec_bin - BIN_LOADER_EXC_BIN command parameters
+ * struct sev_user_data_psp_stub_exec_bin - SEV_PSP_STUB_EXEC_BIN command parameters
  *
  * @req_address: Request buffer address
  * @ccd_id: The CCD ID to execute the binary on
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_exec_bin {
+struct sev_user_data_psp_stub_exec_bin {
     __u64 req_address;             /* In */
     __u32 ccd_id;                  /* In */
     __s32 status;                  /* Out */
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_smn_read - BIN_LOADER_SMN_READ/BIN_LOADER_SMN_WRITE command parameters
+ * struct sev_user_data_psp_stub_smn_read - SEV_PSP_STUB_SMN_READ/SEV_PSP_STUB_SMN_WRITE command parameters
  *
  * @ccd_id: The CCD ID to execute the request on
  * @ccd_tgt_id: The target CCD to read a register from
@@ -194,7 +198,7 @@ struct sev_user_data_bin_ldr_exec_bin {
  * @value: Contains the value on successful read or value to write
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_smn_rw {
+struct sev_user_data_psp_stub_smn_rw {
     __u32 ccd_id;                  /* In */
     __u32 ccd_id_tgt;              /* In */
     __u32 smn_addr;                /* In */
@@ -204,7 +208,7 @@ struct sev_user_data_bin_ldr_smn_rw {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_psp_rw - BIN_LOADER_PSP_READ/BIN_LOADER_PSP_WRITE command parameters
+ * struct sev_user_data_psp_stub_psp_rw - SEV_PSP_STUB_PSP_READ/SEV_PSP_STUB_PSP_WRITE command parameters
  *
  * @ccd_id: The CCD ID to execute the request on
  * @psp_addr: PSP address to read/write from/to
@@ -212,7 +216,7 @@ struct sev_user_data_bin_ldr_smn_rw {
  * @size: Number of bytes to copy
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_psp_rw {
+struct sev_user_data_psp_stub_psp_rw {
     __u32 ccd_id;                  /* In */
     __u32 psp_addr;                /* In */
     __u64 buf;                     /* In */
@@ -221,7 +225,7 @@ struct sev_user_data_bin_ldr_psp_rw {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_psp_x86_rw - SEV_BIN_LDR_PSP_X86_READ/SEV_BIN_LDR_PSP_X86_WRITE command parameters
+ * struct sev_user_data_psp_stub_psp_x86_rw - SEV_PSP_STUB_PSP_X86_READ/SEV_PSP_STUB_PSP_X86_WRITE command parameters
  *
  * @ccd_id: The CCD ID to execute the request on
  * @size: Number of bytes to copy
@@ -229,7 +233,7 @@ struct sev_user_data_bin_ldr_psp_rw {
  * @buf: Userspace buffer to read the data into or write data from
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_psp_x86_rw {
+struct sev_user_data_psp_stub_psp_x86_rw {
     __u32 ccd_id;                  /* In */
     __u32 size;                    /* In */
     __u64 x86_phys;                /* In */
@@ -238,7 +242,7 @@ struct sev_user_data_bin_ldr_psp_x86_rw {
 } __attribute__((packed));
 
 /**
- * struct sev_user_data_bin_ldr_svc_call - BIN_LOADER_CALL_SVC command parameters
+ * struct sev_user_data_psp_stub_svc_call - SEV_PSP_STUB_CALL_SVC command parameters
  *
  * @ccd_id: The CCD ID to execute the request on
  * @syscall: The syscall to execute
@@ -249,7 +253,7 @@ struct sev_user_data_bin_ldr_psp_x86_rw {
  * @r0_return: R0 content upon syscall return
  * @status: The status code returned by the request
  */
-struct sev_user_data_bin_ldr_svc_call {
+struct sev_user_data_psp_stub_svc_call {
     __u32 ccd_id;                  /* In */
     __u32 syscall;                 /* In */
     __u32 r0;                      /* In */

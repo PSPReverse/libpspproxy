@@ -38,6 +38,7 @@ enum {
     SEV_PSP_STUB_PSP_X86_READ,
     SEV_PSP_STUB_PSP_X86_WRITE,
     SEV_PSP_STUB_CALL_SVC,
+    SEV_PSP_STUB_QUERY_INFO,
     SEV_X86_SMN_READ,
     SEV_X86_SMN_WRITE,
     SEV_X86_MEM_ALLOC,
@@ -265,6 +266,21 @@ struct sev_user_data_psp_stub_svc_call {
 } __attribute__((packed));
 
 /**
+ * struct sev_user_data_query_info - SEV_PSP_STUB_QUERY_INFO command parameters
+ *
+ * @ccd_id: The CCD ID to execute the request on
+ * @psp_addr_scratch_start: PSP address of the start of the scratch space area
+ * @scratch_size: Size of the scratch area in bytes
+ * @status: The status code returned by the request
+ */
+struct sev_user_data_query_info {
+    __u32 ccd_id;                  /* In */
+    __u32 psp_addr_scratch_start;  /* Out */
+    __u32 scratch_size;            /* Out */
+    __s32 status;                  /* Out */
+} __attribute__((packed));
+
+/**
  * struct sev_user_data_x86_smn_rw - SEV_X86_SMN_READ/SEV_X86_SMN_WRITE ioctl parameters
  *
  * @cmd: SEV commands to execute
@@ -314,6 +330,14 @@ struct sev_user_data_x86_mem_rw {
     __u32 size;                    /* In */
 } __attribute__((packed));
 
+/**
+ * struct sev_user_data_emu_wait_for_work - SEV_EMU_WAIT_FOR_WORK command parameters
+ *
+ * @timeout: Timeout in milliseconds to wait for new work.
+ * @cmd: The cmd id on success
+ * @phys_lsb: Lower 32bits of the physical address of the command buffer.
+ * @phys_msb: High 32bits of the physical address of the command buffer.
+ */
 struct sev_user_data_emu_wait_for_work {
     __u32 timeout;                 /* In */
     __u32 cmd;                     /* Out */
@@ -321,8 +345,13 @@ struct sev_user_data_emu_wait_for_work {
     __u32 phys_msb;                /* Out */
 } __attribute__((packed));
 
+/**
+ * struct sev_user_data_emu_set_result - SEV_EMU_SET_RESULT command parameters
+ *
+ * @result: Result code from the SEV app.
+ */
 struct sev_user_data_emu_set_result {
-    __u32 result;
+    __u32 result;                  /* In */
 } __attribute__((packed));
 
 /**

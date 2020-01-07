@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright (C) 2019 Alexander Eichner <alexander.eichner@campus.tu-berlin.de>
+ * Copyright (C) 2019-2020 Alexander Eichner <alexander.eichner@campus.tu-berlin.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -62,6 +62,10 @@ void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
  * @returns Status code.
  * @param   hCtx                    The PSP proxy context handle.
  * @param   idCcd                   The CCD ID to set.
+ *
+ * @note This doesn't work well together with the scratch space allocator as each PSP has its own scratch space.
+ *       If you are intending to use the scratch space don't use this after the first call to PSPProxyCtxScratchSpaceAlloc().
+ *       Instead create a dedicated proxy context for each PSP and set the CCD ID once at the beginning.
  */
 int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
 
@@ -256,5 +260,25 @@ int PSPProxyCtxEmuWaitForWork(PSPPROXYCTX hCtx, uint32_t *pidCmd, X86PADDR *pPhy
  * @param   uResult                 The result to set.
  */
 int PSPProxyCtxEmuSetResult(PSPPROXYCTX hCtx, uint32_t uResult);
+
+/**
+ * Allocates a region of scratch space on the PSP.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   cbAlloc                 How much to allocate.
+ * @param   pPspAddr                Where to store the PSP address of the start of the allocated scratch space on success.
+ */
+int PSPProxyCtxScratchSpaceAlloc(PSPPROXYCTX hCtx, size_t cbAlloc, PSPADDR *pPspAddr);
+
+/**
+ * Frees a previously allocated scratch space region.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   PspAddr                 The previously allocated scratch space PSP address.
+ * @param   cb                      Size of the scratch space area to free (must be same as used during allocation).
+ */
+int PSPProxyCtxScratchSpaceFree(PSPPROXYCTX hCtx, PSPADDR PspAddr, size_t cb);
 
 #endif /* __libpspproxy_h */

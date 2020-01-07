@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright (C) 2019 Alexander Eichner <alexander.eichner@campus.tu-berlin.de>
+ * Copyright (C) 2019-2020 Alexander Eichner <alexander.eichner@campus.tu-berlin.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,6 +39,24 @@
 
 
 /**
+ * A free chunk of scratch space memory.
+ */
+typedef struct PSPSCRATCHCHUNKFREE
+{
+    /** Pointer to the next free chunk or NULL if end of list. */
+    struct PSPSCRATCHCHUNKFREE     *pNext;
+    /** Pointer to the previous free chunk or NULL if head of list. */
+    struct PSPSCRATCHCHUNKFREE     *pPrev;
+    /** Start address of the free chunk. */
+    PSPADDR                        PspAddrStart;
+    /** Size of the chunk. */
+    size_t                         cbChunk;
+} PSPSCRATCHCHUNKFREE;
+/** Pointer to a free scratch space chunk. */
+typedef PSPSCRATCHCHUNKFREE *PPSPSCRATCHCHUNKFREE;
+
+
+/**
  * Internal PSP proxy context.
  */
 typedef struct PSPPROXYCTXINT
@@ -47,6 +65,10 @@ typedef struct PSPPROXYCTXINT
     int                             iFdDev;
     /** The current CCD ID set. */
     uint32_t                        idCcd;
+    /** Flag whether the scratch space manager was initialized. */
+    int                             fScratchSpaceMgrInit;
+    /** List of free scratch space blocks, sorted by PSP address (lowest is head). */
+    PPSPSCRATCHCHUNKFREE            pScratchFreeHead;
 } PSPPROXYCTXINT;
 /** Pointer to an internal PSP proxy context. */
 typedef PSPPROXYCTXINT *PPSPPROXYCTXINT;
@@ -81,6 +103,41 @@ static int pspProxyCtxIoctl(PPSPPROXYCTXINT pThis, uint32_t idCmd, void *pvArgs,
 }
 
 
+/**
+ * Initializes the scratch space manager.
+ *
+ * @returns Status code.
+ * @param   pThis                   The context instance.
+ */
+static int pspProxyCtxScratchSpaceMgrInit(PPSPPROXYCTXINT pThis)
+{
+    struct sev_user_data_query_info Req;
+
+    memset(&Req, 0, sizeof(Req));
+    Req.ccd_id = pThis->idCcd;
+
+    int rc = pspProxyCtxIoctl(pThis, SEV_PSP_STUB_QUERY_INFO, &Req, NULL);
+    if (!rc)
+    {
+        /* Set up the first chunk covering the whole scratch space area. */
+        PPSPSCRATCHCHUNKFREE pFree = (PPSPSCRATCHCHUNKFREE)malloc(sizeof(*pFree));
+        if (pFree)
+        {
+            pFree->pNext        = NULL;
+            pFree->pPrev        = NULL;
+            pFree->PspAddrStart = Req.psp_addr_scratch_start;
+            pFree->cbChunk      = Req.scratch_size;
+
+            pThis->pScratchFreeHead = pFree;
+            pThis->fScratchSpaceMgrInit = 1;
+        }
+        else
+            rc = -1;
+    }
+
+    return rc;
+}
+
 int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice)
 {
     int rc = 0;
@@ -93,6 +150,7 @@ int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice)
         {
             pThis->iFdDev = iFd;
             pThis->idCcd  = 0;
+            pThis->fScratchSpaceMgrInit = 0;
             *phCtx = pThis;
             return 0;
         }
@@ -534,3 +592,172 @@ int PSPProxyCtxEmuSetResult(PSPPROXYCTX hCtx, uint32_t uResult)
 
     return pspProxyCtxIoctl(pThis, SEV_EMU_SET_RESULT, &Req, NULL);
 }
+
+int PSPProxyCtxScratchSpaceAlloc(PSPPROXYCTX hCtx, size_t cbAlloc, PSPADDR *pPspAddr)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    if (!pThis->fScratchSpaceMgrInit)
+    {
+        int rc = pspProxyCtxScratchSpaceMgrInit(pThis);
+        if (rc)
+            return rc;
+    }
+
+    /** @todo Align size on 8 byte boundary maybe.
+     * This is a very very simple "heap" manager (doesn't really deserve the name),
+     * enough for our purpose but don't have to high expectations on it...
+     */
+
+    /* Find the most optimal chunk first (best match). */
+    PPSPSCRATCHCHUNKFREE pChunkBest = NULL;
+    PPSPSCRATCHCHUNKFREE pChunkCur = pThis->pScratchFreeHead;
+
+    while (pChunkCur)
+    {
+        if (   pChunkCur->cbChunk >= cbAlloc
+            && (   !pChunkBest
+                || pChunkBest->cbChunk > pChunkCur->cbChunk))
+        {
+            pChunkBest = pChunkCur;
+
+            /* No point in going further in case of an exact match. */
+            if (pChunkBest->cbChunk == cbAlloc)
+                break;
+        }
+
+        pChunkCur = pChunkCur->pNext;
+    }
+
+    if (pChunkBest)
+    {
+        if (pChunkBest->cbChunk == cbAlloc)
+        {
+            /* Remove free chunk from list. */
+            if (pChunkBest->pPrev)
+                pChunkBest->pPrev->pNext = pChunkBest->pNext;
+            else
+                pThis->pScratchFreeHead = pChunkBest->pNext;
+
+            if (pChunkBest->pNext)
+                pChunkBest->pNext->pPrev = pChunkBest->pPrev;
+
+            *pPspAddr = pChunkBest->PspAddrStart;
+            free(pChunkBest);
+        }
+        else
+        {
+            /* Resize chunk and leave everything else in place. */
+            size_t cbLeft = pChunkBest->cbChunk - cbAlloc;
+            *pPspAddr = pChunkBest->PspAddrStart + cbLeft;
+            pChunkBest->cbChunk = cbLeft;
+        }
+
+        return 0;
+    }
+
+    return -1;
+}
+
+int PSPProxyCtxScratchSpaceFree(PSPPROXYCTX hCtx, PSPADDR PspAddr, size_t cb)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    /** @todo Align size on 8 byte boundary when done in the alloc method too. */
+
+    if (!pThis->pScratchFreeHead)
+    {
+        /* No free chunk left, create the first one. */
+        PPSPSCRATCHCHUNKFREE pChunk = (PPSPSCRATCHCHUNKFREE)malloc(sizeof(*pChunk));
+        if (!pChunk)
+            return -1;
+
+        pChunk->pNext        = NULL;
+        pChunk->pPrev        = NULL;
+        pChunk->PspAddrStart = PspAddr;
+        pChunk->cbChunk      = cb;
+        pThis->pScratchFreeHead = pChunk;
+    }
+    else
+    {
+        /* Find the right chunk to append to. */
+        PPSPSCRATCHCHUNKFREE pChunkCur = pThis->pScratchFreeHead;
+
+        while (pChunkCur)
+        {
+            /* Check whether we can append or prepend the memory to the chunk. */
+            if (PspAddr + cb == pChunkCur->PspAddrStart)
+            {
+                /* Prepend and check whether we can merge the previous and current chunk. */
+                pChunkCur->PspAddrStart = PspAddr;
+                pChunkCur->cbChunk     += cb;
+
+                if (   pChunkCur->pPrev
+                    && pChunkCur->pPrev->PspAddrStart + pChunkCur->pPrev->cbChunk == pChunkCur->PspAddrStart)
+                {
+                    /* Merge */
+                    PPSPSCRATCHCHUNKFREE pPrev = pChunkCur->pPrev;
+
+                    pPrev->cbChunk += pChunkCur->cbChunk;
+                    pPrev->pNext = pChunkCur->pNext;
+                    if (pChunkCur->pNext)
+                        pChunkCur->pNext->pPrev = pPrev;
+
+                    free(pChunkCur);
+                }
+                break;
+            }
+            else if (pChunkCur->PspAddrStart + pChunkCur->cbChunk == PspAddr)
+            {
+                /* Append and check whether we can merge the next and current chunk. */
+                pChunkCur->cbChunk += cb;
+
+                if (   pChunkCur->pNext
+                    && pChunkCur->PspAddrStart + pChunkCur->cbChunk == pChunkCur->pNext->PspAddrStart)
+                {
+                    /* Merge */
+                    PPSPSCRATCHCHUNKFREE pNext = pChunkCur->pNext;
+
+                    pNext->cbChunk += pChunkCur->cbChunk;
+                    pNext->pPrev = pChunkCur->pPrev;
+                    if (pChunkCur->pPrev)
+                        pChunkCur->pPrev->pNext = pNext;
+                    else
+                        pThis->pScratchFreeHead = pNext;
+
+                    free(pChunkCur);
+                }
+                break;
+            }
+            else if (   !pChunkCur->pNext
+                     || (   pChunkCur->PspAddrStart + pChunkCur->cbChunk < PspAddr
+                         && pChunkCur->pNext->PspAddrStart > PspAddr))
+            {
+                /* Insert/Append a new chunk (correct ordering). */
+                PPSPSCRATCHCHUNKFREE pChunk = (PPSPSCRATCHCHUNKFREE)malloc(sizeof(*pChunk));
+                if (!pChunk)
+                    return -1;
+
+                pChunk->pNext        = NULL;
+                pChunk->pPrev        = NULL;
+                pChunk->PspAddrStart = PspAddr;
+                pChunk->cbChunk      = cb;
+
+                PPSPSCRATCHCHUNKFREE pNext = pChunkCur->pNext;
+                pChunkCur->pNext = pChunk;
+                pChunk->pPrev = pChunkCur;
+                if (pNext)
+                {
+                    pNext->pPrev = pChunk;
+                    pChunk->pNext = pNext;
+                }
+                break;
+            }
+
+            pChunkCur = pChunkCur->pNext;
+        }
+    }
+
+    return 0;
+}
+

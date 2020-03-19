@@ -4,6 +4,7 @@ project(libpspproxy VERSION 0.1.0 DESCRIPTION "Userspace library to interface wi
 
 add_library(pspproxy SHARED
     psp-proxy.c
+    psp-proxy-provider-sev.c
 )
 
 set_target_properties(pspproxy PROPERTIES VERSION ${PROJECT_VERSION})
@@ -14,9 +15,11 @@ target_include_directories(pspproxy PRIVATE include)
 
 add_library(pspproxystatic STATIC
     psp-proxy.c
+    psp-proxy-provider-sev.c
 )
 set_target_properties(pspproxystatic PROPERTIES OUTPUT_NAME pspproxy)
 set_target_properties(pspproxystatic PROPERTIES PUBLIC_HEADER libpspproxy.h)
+set_target_properties(pspproxystatic PROPERTIES POSITION_INDEPENDENT_CODE True)
 target_include_directories(pspproxystatic PRIVATE .)
 target_include_directories(pspproxystatic PRIVATE include)
 

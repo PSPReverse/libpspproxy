@@ -68,6 +68,7 @@ typedef PSPPROXYCTXINT *PPSPPROXYCTXINT;
 
 
 extern const PSPPROXYPROV g_PspProxyProvSev;
+extern const PSPPROXYPROV g_PspProxyProvSerial;
 
 /**
  * Array of known PSP proxy providers.
@@ -75,6 +76,7 @@ extern const PSPPROXYPROV g_PspProxyProvSev;
 static PCPSPPROXYPROV g_apPspProxyProv[] =
 {
     &g_PspProxyProvSev,
+    &g_PspProxyProvSerial,
     NULL
 };
 

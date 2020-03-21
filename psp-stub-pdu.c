@@ -126,7 +126,7 @@ static int pspStubPduCtxHdrValidate(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR p
           || (   pHdr->u.Fields.enmRrnId >= PSPSERIALPDURRNID_RESPONSE_FIRST
               && pHdr->u.Fields.enmRrnId < PSPSERIALPDURRNID_RESPONSE_INVALID_FIRST)))
         return -1;
-    if (   pHdr->u.Fields.cPdus != pThis->cPduRecvNext
+    if (   pHdr->u.Fields.cPdus != pThis->cPduRecvNext + 1
         && pThis->fConnect)
         return -1;
     if (pHdr->u.Fields.idCcd >= pThis->cCcds)
@@ -586,8 +586,8 @@ int pspStubPduCtxPspSmnWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t idC
     PSPSERIALSMNMEMXFERREQ Req;
     Req.SmnAddrStart = uSmnAddr;
     Req.cbXfer       = cbVal;
-    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
-                                  PSPSERIALPDURRNID_RESPONSE_PSP_MEM_WRITE,
+    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_WRITE,
+                                  PSPSERIALPDURRNID_RESPONSE_PSP_SMN_WRITE,
                                   &Req, sizeof(Req), pvVal, cbVal, 10000);
 }
 

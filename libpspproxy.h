@@ -116,6 +116,28 @@ int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint3
 int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite);
 
 /**
+ * Reads the register at the given PSP MMIO address.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   uPspAddr                The PSP address to start reading from.
+ * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+ * @param   pvVal                   Where to store the value on success.
+ */
+int PSPProxyCtxPspMmioRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal);
+
+/**
+ * Writes to the register at the given PSP MMIO address.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   uPspAddr                The PSP address to start writing to.
+ * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+ * @param   pvVal                   The value to write.
+ */
+int PSPProxyCtxPspMmioWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal);
+
+/**
  * Reads from the x86 address space using the PSP (to circumvent protection mechanisms
  * on the x86 core).
  *
@@ -138,6 +160,30 @@ int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf
  * @param   cbWrite                 Amount of data to write.
  */
 int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite);
+
+/**
+ * Reads from the x86 MMIO address space using the PSP (to circumvent protection mechanisms
+ * on the x86 core).
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   PhysX86Addr             The x86 address to start reading from.
+ * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+ * @param   pvVal                   Where to store the value on success.
+ */
+int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal);
+
+/**
+ * Writes to the x86 MMIO address space using the PSP (to circumvent protection mechanisms
+ * on the x86 core).
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   PhysX86Addr             The x86 address to start writing to.
+ * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+ * @param   pvVal                   The value to write.
+ */
+int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
 
 /**
  * Execute a syscall on the PSP.

@@ -1,5 +1,5 @@
 /** @file
- * PSP proxy library to interface with the hardware of the PSP - remote access over serial
+ * PSP proxy library to interface with the hardware of the PSP - remote access over a TCP socket
  */
 
 /*
@@ -22,14 +22,14 @@
 
 #define _DEFAULT_SOURCE
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include <poll.h>
 #include <sys/ioctl.h>
@@ -43,8 +43,8 @@
  */
 typedef struct PSPPROXYPROVCTXINT
 {
-    /** The file descriptor of the device proxying our calls. */
-    int                             iFdDev;
+    /** The socket descriptor for the connection. */
+    int                             iFdCon;
     /** The PDU context. */
     PSPSTUBPDUCTX                   hPduCtx;
 } PSPPROXYPROVCTXINT;
@@ -56,13 +56,13 @@ typedef PSPPROXYPROVCTXINT *PPSPPROXYPROVCTXINT;
 /**
  * @copydoc{PSPSTUBPDUIOIF,pfnPeek}
  */
-static size_t serialProvPduIoIfPeek(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
+static size_t tcpProvPduIoIfPeek(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
 {
     (void)hPspStubPduCtx;
 
     PPSPPROXYPROVCTXINT pThis = (PPSPPROXYPROVCTXINT)pvUser;
     int cbAvail = 0;
-    int rc = ioctl(pThis->iFdDev, FIONREAD, &cbAvail);
+    int rc = ioctl(pThis->iFdCon, FIONREAD, &cbAvail);
     if (rc)
         return 0;
 
@@ -73,12 +73,12 @@ static size_t serialProvPduIoIfPeek(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
 /**
  * @copydoc{PSPSTUBPDUIOIF,pfnRead}
  */
-static int serialProvPduIoIfRead(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, void *pvDst, size_t cbRead, size_t *pcbRead)
+static int tcpProvPduIoIfRead(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, void *pvDst, size_t cbRead, size_t *pcbRead)
 {
     (void)hPspStubPduCtx;
 
     PPSPPROXYPROVCTXINT pThis = (PPSPPROXYPROVCTXINT)pvUser;
-    ssize_t cbRet = read(pThis->iFdDev, pvDst, cbRead);
+    ssize_t cbRet = recv(pThis->iFdCon, pvDst, cbRead, MSG_DONTWAIT);
     if (cbRet > 0)
     {
         *pcbRead = cbRead;
@@ -98,12 +98,12 @@ static int serialProvPduIoIfRead(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, voi
 /**
  * @copydoc{PSPSTUBPDUIOIF,pfnWrite}
  */
-static int serialProvPduIoIfWrite(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const void *pvPkt, size_t cbPkt)
+static int tcpProvPduIoIfWrite(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const void *pvPkt, size_t cbPkt)
 {
     (void)hPspStubPduCtx;
 
     PPSPPROXYPROVCTXINT pThis = (PPSPPROXYPROVCTXINT)pvUser;
-    ssize_t cbRet = write(pThis->iFdDev, pvPkt, cbPkt);
+    ssize_t cbRet = send(pThis->iFdCon, pvPkt, cbPkt, 0);
     if (cbRet == cbPkt)
         return 0;
 
@@ -114,13 +114,13 @@ static int serialProvPduIoIfWrite(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, co
 /**
  * @copydoc{PSPSTUBPDUIOIF,pfnPoll}
  */
-static int serialProvPduIoIfPoll(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, uint32_t cMillies)
+static int tcpProvPduIoIfPoll(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, uint32_t cMillies)
 {
     (void)hPspStubPduCtx;
     PPSPPROXYPROVCTXINT pStub = (PPSPPROXYPROVCTXINT)pvUser;
     struct pollfd PollFd;
 
-    PollFd.fd      = pStub->iFdDev;
+    PollFd.fd      = pStub->iFdCon;
     PollFd.events  = POLLIN | POLLHUP | POLLERR;
     PollFd.revents = 0;
 
@@ -141,7 +141,7 @@ static int serialProvPduIoIfPoll(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, uin
 /**
  * @copydoc{PSPSTUBPDUIOIF,pfnInterrupt}
  */
-static int serialProvPduIoIfInterrupt(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
+static int tcpProvPduIoIfInterrupt(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
 {
     return -1; /** @todo */
 }
@@ -153,31 +153,78 @@ static int serialProvPduIoIfInterrupt(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser
 static const PSPSTUBPDUIOIF g_PduIoIf =
 {
     /** pfnPeek */
-    serialProvPduIoIfPeek,
+    tcpProvPduIoIfPeek,
     /** pfnRead */
-    serialProvPduIoIfRead,
+    tcpProvPduIoIfRead,
     /** pfnWrite */
-    serialProvPduIoIfWrite,
+    tcpProvPduIoIfWrite,
     /** pfnPoll */
-    serialProvPduIoIfPoll,
+    tcpProvPduIoIfPoll,
     /** pfnInterrupt */
-    serialProvPduIoIfInterrupt
+    tcpProvPduIoIfInterrupt
 };
 
 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+int tcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     int rc = 0;
+    char szDev[256]; /* Should be plenty. */
 
-    int iFd = open(pszDevice, O_RDWR);
-    if (iFd > 0)
-        pThis->iFdDev = iFd;
+    memset(&szDev[0], 0, sizeof(szDev));
+    strncpy(&szDev[0], pszDevice, sizeof(szDev));
+    if (szDev[sizeof(szDev) - 1] == '\0')
+    {
+        char *pszSep = strchr(&szDev[0], ':');
+        if (pszSep)
+        {
+            *pszSep = '\0';
+            pszSep++;
+            struct hostent *pSrv = gethostbyname(&szDev[0]);
+            if (pSrv)
+            {
+                struct sockaddr_in SrvAddr;
+                memset(&SrvAddr, 0, sizeof(SrvAddr));
+                SrvAddr.sin_family = AF_INET;
+                memcpy(&SrvAddr.sin_addr.s_addr, pSrv->h_addr, pSrv->h_length);
+                SrvAddr.sin_port = htons(atoi(pszSep));
+
+                pThis->iFdCon = socket(AF_INET, SOCK_STREAM, 0);
+                if (pThis->iFdCon > -1)
+                {
+                    int rcPsx = connect(pThis->iFdCon,(struct sockaddr *)&SrvAddr,sizeof(SrvAddr));
+                    if (!rcPsx)
+                    {
+                        /* Create the PDU context. */
+                        rc = pspStubPduCtxCreate(&pThis->hPduCtx, &g_PduIoIf, pThis);
+                        if (!rc)
+                        {
+                            rc = pspStubPduCtxConnect(pThis->hPduCtx, 10 * 1000);
+                            if (!rc)
+                                return 0;
+
+                            pspStubPduCtxDestroy(pThis->hPduCtx);
+                        }
+                    }
+                    else
+                        rc = -1;
+
+                    close(pThis->iFdCon);
+                }
+                else
+                    rc = -1;
+            }
+            else
+                rc = -1;
+        }
+        else
+            rc = -1;
+    }
     else
-        rc = -1; /** @todo Error handling. */
+        rc = -1;
 
     return rc;
 }
@@ -186,20 +233,21 @@ int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxDestroy}
  */
-void serialProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
+void tcpProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
 
     pspStubPduCtxDestroy(pThis->hPduCtx);
-    close(pThis->iFdDev);
-    pThis->iFdDev = 0;
+    shutdown(pThis->iFdCon, SHUT_RDWR);
+    close(pThis->iFdCon);
+    pThis->iFdCon = 0;
 }
 
 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxQueryInfo}
  */
-static int serialProvCtxQueryInfo(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR *pPspAddrScratchStart, size_t *pcbScratch)
+static int tcpProvCtxQueryInfo(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR *pPspAddrScratchStart, size_t *pcbScratch)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxQueryInfo(pThis->hPduCtx, idCcd, pPspAddrScratchStart, pcbScratch);
@@ -209,7 +257,7 @@ static int serialProvCtxQueryInfo(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPA
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnRead}
  */
-int serialProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
+int tcpProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspSmnRead(pThis->hPduCtx, idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
@@ -219,7 +267,7 @@ int serialProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t i
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnWrite}
  */
-int serialProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
+int tcpProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspSmnWrite(pThis->hPduCtx, idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
@@ -229,7 +277,7 @@ int serialProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemRead}
  */
-int serialProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
+int tcpProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMemRead(pThis->hPduCtx, idCcd, uPspAddr, pvBuf, cbRead);
@@ -239,7 +287,7 @@ int serialProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uP
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemWrite}
  */
-int serialProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
+int tcpProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMemWrite(pThis->hPduCtx, idCcd, uPspAddr, pvBuf, cbWrite);
@@ -249,7 +297,7 @@ int serialProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR u
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioRead}
  */
-int serialProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
+int tcpProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMmioRead(pThis->hPduCtx, idCcd, uPspAddr, pvVal, cbVal);
@@ -259,7 +307,7 @@ int serialProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR u
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioWrite}
  */
-int serialProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
+int tcpProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMmioWrite(pThis->hPduCtx, idCcd, uPspAddr, pvVal, cbVal);
@@ -269,7 +317,7 @@ int serialProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemRead}
  */
-int serialProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
+int tcpProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MemRead(pThis->hPduCtx, idCcd, PhysX86Addr, pvBuf, cbRead);
@@ -279,7 +327,7 @@ int serialProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemWrite}
  */
-int serialProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
+int tcpProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MemWrite(pThis->hPduCtx, idCcd, PhysX86Addr, pvBuf, cbWrite);
@@ -289,7 +337,7 @@ int serialProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PAD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioRead}
  */
-int serialProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
+int tcpProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MmioRead(pThis->hPduCtx, idCcd, PhysX86Addr, pvVal, cbVal);
@@ -299,7 +347,7 @@ int serialProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PAD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioWrite}
  */
-int serialProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
+int tcpProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MmioWrite(pThis->hPduCtx, idCcd, PhysX86Addr, pvVal, cbVal);
@@ -309,42 +357,42 @@ int serialProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PA
 /**
  * Provider registration structure.
  */
-const PSPPROXYPROV g_PspProxyProvSerial =
+const PSPPROXYPROV g_PspProxyProvTcp =
 {
     /** pszId */
-    "serial",
+    "tcp",
     /** pszDesc */
-    "PSP access through a serial connection, device schema looks like serial://<device path>:<baudrate>:<parity [e|n|o]>:<data bit count>",
+    "PSP access through a TCP connection, device schema looks like tcp://<hostname>:<port>",
     /** cbCtx */
     sizeof(PSPPROXYPROVCTXINT),
     /** fFeatures */
     0,
     /** pfnCtxInit */
-    serialProvCtxInit,
+    tcpProvCtxInit,
     /** pfnCtxDestroy */
-    serialProvCtxDestroy,
+    tcpProvCtxDestroy,
     /** pfnCtxQueryInfo */
-    serialProvCtxQueryInfo,
+    tcpProvCtxQueryInfo,
     /** pfnCtxPspSmnRead */
-    serialProvCtxPspSmnRead,
+    tcpProvCtxPspSmnRead,
     /** pfnCtxPspSmnWrite */
-    serialProvCtxPspSmnWrite,
+    tcpProvCtxPspSmnWrite,
     /** pfnCtxPspMemRead */
-    serialProvCtxPspMemRead,
+    tcpProvCtxPspMemRead,
     /** pfnCtxPspMemWrite */
-    serialProvCtxPspMemWrite,
+    tcpProvCtxPspMemWrite,
     /** pfnCtxPspMmioRead */
-    serialProvCtxPspMmioRead,
+    tcpProvCtxPspMmioRead,
     /** pfnCtxPspMmioWrite */
-    serialProvCtxPspMmioWrite,
+    tcpProvCtxPspMmioWrite,
     /** pfnCtxPspX86MemRead */
-    serialProvCtxPspX86MemRead,
+    tcpProvCtxPspX86MemRead,
     /** pfnCtxPspX86MemWrite */
-    serialProvCtxPspX86MemWrite,
+    tcpProvCtxPspX86MemWrite,
     /** pfnCtxPspX86MmioRead */
-    serialProvCtxPspX86MmioRead,
+    tcpProvCtxPspX86MmioRead,
     /** pfnCtxPspX86MmioWrite */
-    serialProvCtxPspX86MmioWrite,
+    tcpProvCtxPspX86MmioWrite,
     /** pfnCtxPspSvcCall */
     NULL,
     /** pfnCtxX86SmnRead */

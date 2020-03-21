@@ -77,6 +77,45 @@ class PSPProxy(object):
         self.rcLibLast = lib.PSPProxyCtxPspMemWrite(self.hCtx, uPspAddr, pvBuf, len(abData));
         return self.rcLibLast;
 
+    def readPspMmio(self, uPspAddr, cbVal):
+        pVal = None;
+        if cbVal == 1:
+            pVal = ffi.new("uint8_t *");
+        elif cbVal == 2:
+            pVal = ffi.new("uint16_t *");
+        elif cbVal == 4:
+            pVal = ffi.new("uint32_t *");
+        elif cbVal == 8:
+            pVal = ffi.new("uint64_t *");
+        else:
+            return (-1, 0);
+
+        self.rcLibLast = lib.PSPProxyCtxPspMmioRead(self.hCtx, idCcdTgt, uPspAddr, cbVal, pVal);
+        if self.rcLibLast == 0:
+            return (0, pVal[0]);
+        else:
+            return (self.rcLibLast, 0);
+
+    def writePspMmio(self, uPspAddr, cbVal, uVal):
+        pVal = None;
+        if cbVal == 1:
+            pVal = ffi.new("uint8_t *");
+        elif cbVal == 2:
+            pVal = ffi.new("uint16_t *");
+        elif cbVal == 4:
+            pVal = ffi.new("uint32_t *");
+        elif cbVal == 8:
+            pVal = ffi.new("uint64_t *");
+        else:
+            return -1;
+
+        pVal[0] = uVal;
+        self.rcLibLast = lib.PSPProxyCtxPspMmioWrite(self.hCtx, idCcdTgt, uPspAddr, cbVal, pVal);
+        if self.rcLibLast == 0:
+            return 0;
+        else:
+            return self.rcLibLast;
+
     def readPspX86Mem(self, uX86Addr, cbRead):
         abData = bytearray(cbRead);
         pvBuf = ffi.from_buffer(abData);
@@ -90,6 +129,45 @@ class PSPProxy(object):
         pvBuf = ffi.from_buffer(abData);
         self.rcLibLast = lib.PSPProxyCtxPspX86MemWrite(self.hCtx, uX86Addr, pvBuf, len(abData));
         return self.rcLibLast;
+
+    def readPspX86Mmio(self, uX86Addr, cbVal):
+        pVal = None;
+        if cbVal == 1:
+            pVal = ffi.new("uint8_t *");
+        elif cbVal == 2:
+            pVal = ffi.new("uint16_t *");
+        elif cbVal == 4:
+            pVal = ffi.new("uint32_t *");
+        elif cbVal == 8:
+            pVal = ffi.new("uint64_t *");
+        else:
+            return (-1, 0);
+
+        self.rcLibLast = lib.PSPProxyCtxPspX86MmioRead(self.hCtx, uX86Addr, cbVal, pVal);
+        if self.rcLibLast == 0:
+            return (0, pVal[0]);
+        else:
+            return (self.rcLibLast, 0);
+
+    def writePspX86Mmio(self, uX86Addr, cbVal, uVal):
+        pVal = None;
+        if cbVal == 1:
+            pVal = ffi.new("uint8_t *");
+        elif cbVal == 2:
+            pVal = ffi.new("uint16_t *");
+        elif cbVal == 4:
+            pVal = ffi.new("uint32_t *");
+        elif cbVal == 8:
+            pVal = ffi.new("uint64_t *");
+        else:
+            return -1;
+
+        pVal[0] = uVal;
+        self.rcLibLast = lib.PSPProxyCtxPspX86MmioWrite(self.hCtx, uX86Addr, cbVal, pVal);
+        if self.rcLibLast == 0:
+            return 0;
+        else:
+            return self.rcLibLast;
 
     def callSvc(self, idxSyscall, uR0, uR1, uR2, uR3):
         pR0Return = ffi.new("uint32_t *");

@@ -251,6 +251,24 @@ int sevProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPsp
 
 
 /**
+ * @copydoc{PSPPROXYPROV,pfnCtxPspMmioRead}
+ */
+int sevProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
+{
+    return sevProvCtxPspMemRead(hProvCtx, idCcd, uPspAddr, pvVal, cbVal);
+}
+
+
+/**
+ * @copydoc{PSPPROXYPROV,pfnCtxPspMmioWrite}
+ */
+int sevProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
+{
+    return sevProvCtxPspMemWrite(hProvCtx, idCcd, uPspAddr, pvVal, cbVal);
+}
+
+
+/**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemRead}
  */
 int sevProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
@@ -283,6 +301,24 @@ int sevProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR 
     Req.size       = cbWrite;
 
     return sevProvCtxIoctl(pThis, SEV_PSP_STUB_PSP_X86_WRITE, &Req, NULL);
+}
+
+
+/**
+ * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioRead}
+ */
+int sevProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
+{
+    return sevProvCtxPspX86MemRead(hProvCtx, idCcd, PhysX86Addr, pvVal, cbVal);
+}
+
+
+/**
+ * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioWrite}
+ */
+int sevProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
+{
+    return sevProvCtxPspX86MemWrite(hProvCtx, idCcd, PhysX86Addr, pvVal, cbVal);
 }
 
 
@@ -625,10 +661,18 @@ const PSPPROXYPROV g_PspProxyProvSev =
     sevProvCtxPspMemRead,
     /** pfnCtxPspMemWrite */
     sevProvCtxPspMemWrite,
+    /** pfnCtxPspMmioRead */
+    sevProvCtxPspMmioRead,
+    /** pfnCtxPspMmioWrite */
+    sevProvCtxPspMmioWrite,
     /** pfnCtxPspX86MemRead */
     sevProvCtxPspX86MemRead,
     /** pfnCtxPspX86MemWrite */
     sevProvCtxPspX86MemWrite,
+    /** pfnCtxPspX86MmioRead */
+    sevProvCtxPspX86MmioRead,
+    /** pfnCtxPspX86MmioWrite */
+    sevProvCtxPspX86MmioWrite,
     /** pfnCtxPspSvcCall */
     sevProvCtxPspSvcCall,
     /** pfnCtxX86SmnRead */

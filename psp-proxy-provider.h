@@ -121,6 +121,30 @@ typedef struct PSPPROXYPROV
     int (*pfnCtxPspMemWrite) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite);
 
     /**
+     * Reads the register at the given PSP MMIO address.
+     *
+     * @returns Status code.
+     * @param   hProvCtx                Provider context instance data.
+     * @param   idCcd                   The source CCD ID for the read.
+     * @param   uPspAddr                The MMIO address/offset to access.
+     * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+     * @param   pvVal                   Where to store the value on success.
+     */
+    int (*pfnCtxPspMmioRead) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal);
+
+    /**
+     * Writes to the register at the given PSP MMIO address.
+     *
+     * @returns Status code.
+     * @param   hProvCtx                Provider context instance data.
+     * @param   idCcd                   The source CCD ID for the write.
+     * @param   uPspAddr                The MMIO address/offset to access.
+     * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+     * @param   pvVal                   The value to write.
+     */
+    int (*pfnCtxPspMmioWrite) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal);
+
+    /**
      * Reads from the x86 address space using the PSP (to circumvent protection mechanisms
      * on the x86 core).
      *
@@ -145,6 +169,30 @@ typedef struct PSPPROXYPROV
      * @param   cbWrite                 Amount of data to write.
      */
     int (*pfnCtxPspX86MemWrite) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite);
+
+    /**
+     * Reads the register at the given x86 MMIO address.
+     *
+     * @returns Status code.
+     * @param   hProvCtx                Provider context instance data.
+     * @param   idCcd                   The source CCD ID for the read.
+     * @param   PhysX86Addr             The MMIO address/offset to access.
+     * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+     * @param   pvVal                   Where to store the value on success.
+     */
+    int (*pfnCtxPspX86MmioRead) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal);
+
+    /**
+     * Writes to the register at the given x86 MMIO address.
+     *
+     * @returns Status code.
+     * @param   hProvCtx                Provider context instance data.
+     * @param   idCcd                   The source CCD ID for the write.
+     * @param   PhysX86Addr             The MMIO address/offset to access.
+     * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
+     * @param   pvVal                   The value to write.
+     */
+    int (*pfnCtxPspX86MmioWrite) (PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
 
     /**
      * Execute a syscall on the PSP - optional.

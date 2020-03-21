@@ -7,6 +7,8 @@ add_library(pspproxy SHARED
     psp-proxy.c
     psp-proxy-provider-sev.c
     psp-proxy-provider-serial.c
+    psp-proxy-provider-tcp.c
+    psp-stub-pdu.c
 )
 
 set_target_properties(pspproxy PROPERTIES VERSION ${PROJECT_VERSION})
@@ -20,6 +22,8 @@ add_library(pspproxystatic STATIC
     psp-proxy.c
     psp-proxy-provider-sev.c
     psp-proxy-provider-serial.c
+    psp-proxy-provider-tcp.c
+    psp-stub-pdu.c
 )
 set_target_properties(pspproxystatic PROPERTIES OUTPUT_NAME pspproxy)
 set_target_properties(pspproxystatic PROPERTIES PUBLIC_HEADER libpspproxy.h)

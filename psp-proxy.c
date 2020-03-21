@@ -69,6 +69,7 @@ typedef PSPPROXYCTXINT *PPSPPROXYCTXINT;
 
 extern const PSPPROXYPROV g_PspProxyProvSev;
 extern const PSPPROXYPROV g_PspProxyProvSerial;
+extern const PSPPROXYPROV g_PspProxyProvTcp;
 
 /**
  * Array of known PSP proxy providers.
@@ -77,6 +78,7 @@ static PCPSPPROXYPROV g_apPspProxyProv[] =
 {
     &g_PspProxyProvSev,
     &g_PspProxyProvSerial,
+    &g_PspProxyProvTcp,
     NULL
 };
 
@@ -243,6 +245,22 @@ int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf
 }
 
 
+int PSPProxyCtxPspMmioRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pThis->pProv->pfnCtxPspMmioRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, cbVal, pvVal);
+}
+
+
+int PSPProxyCtxPspMmioWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pThis->pProv->pfnCtxPspMmioWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, cbVal, pvVal);
+}
+
+
 int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYCTXINT pThis = hCtx;
@@ -256,6 +274,22 @@ int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void
     PPSPPROXYCTXINT pThis = hCtx;
 
     return pThis->pProv->pfnCtxPspX86MemWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, pvBuf, cbWrite);
+}
+
+
+int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pThis->pProv->pfnCtxPspX86MmioRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, cbVal, pvVal);
+}
+
+
+int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pThis->pProv->pfnCtxPspX86MmioWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, cbVal, pvVal);
 }
 
 

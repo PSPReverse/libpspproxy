@@ -90,7 +90,7 @@ class PSPProxy(object):
         else:
             return (-1, 0);
 
-        self.rcLibLast = lib.PSPProxyCtxPspMmioRead(self.hCtx, idCcdTgt, uPspAddr, cbVal, pVal);
+        self.rcLibLast = lib.PSPProxyCtxPspMmioRead(self.hCtx, uPspAddr, cbVal, pVal);
         if self.rcLibLast == 0:
             return (0, pVal[0]);
         else:
@@ -110,7 +110,7 @@ class PSPProxy(object):
             return -1;
 
         pVal[0] = uVal;
-        self.rcLibLast = lib.PSPProxyCtxPspMmioWrite(self.hCtx, idCcdTgt, uPspAddr, cbVal, pVal);
+        self.rcLibLast = lib.PSPProxyCtxPspMmioWrite(self.hCtx, uPspAddr, cbVal, pVal);
         if self.rcLibLast == 0:
             return 0;
         else:

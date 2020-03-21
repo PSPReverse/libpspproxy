@@ -32,6 +32,12 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
 int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);
 int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead);
 int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite);
+int PSPProxyCtxPspMmioRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal);
+int PSPProxyCtxPspMmioWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal);
+int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead);
+int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite);
+int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal);
+int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
 int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return);
 int PSPProxyCtxX86SmnRead(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
 int PSPProxyCtxX86SmnWrite(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);

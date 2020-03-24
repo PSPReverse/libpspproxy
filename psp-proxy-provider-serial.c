@@ -145,6 +145,8 @@ static int serialProvPduIoIfRead(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, voi
     (void)hPspStubPduCtx;
     PPSPPROXYPROVCTXINT pThis = (PPSPPROXYPROVCTXINT)pvUser;
 
+    *pcbRead = 0;
+
     if (serialProvCtxEnsureBlockingMode(pThis, false /*fBlocking*/) == -1)
         return -1;
 
@@ -159,7 +161,10 @@ static int serialProvPduIoIfRead(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, voi
         return -1;
 
     if (errno == EAGAIN || errno == EWOULDBLOCK)
+    {
+        *pcbRead = 0;
         return 0;
+    }
 
     return -1;
 }

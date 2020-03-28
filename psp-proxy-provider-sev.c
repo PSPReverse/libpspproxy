@@ -82,7 +82,7 @@ static int sevProvCtxIoctl(PPSPPROXYPROVCTXINT pThis, uint32_t idCmd, void *pvAr
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-int sevProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int sevProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     int rc = 0;
@@ -100,7 +100,7 @@ int sevProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxDestroy}
  */
-void sevProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
+static void sevProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
 
@@ -134,7 +134,7 @@ static int sevProvCtxQueryInfo(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnRead}
  */
-int sevProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
+static int sevProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_smn_rw Req;
@@ -177,7 +177,7 @@ int sevProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCc
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnWrite}
  */
-int sevProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
+static int sevProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_smn_rw Req;
@@ -217,7 +217,7 @@ int sevProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idC
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemRead}
  */
-int sevProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
+static int sevProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_psp_rw Req;
@@ -235,7 +235,7 @@ int sevProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspA
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemWrite}
  */
-int sevProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
+static int sevProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_psp_rw Req;
@@ -253,7 +253,7 @@ int sevProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPsp
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioRead}
  */
-int sevProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
+static int sevProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
 {
     return sevProvCtxPspMemRead(hProvCtx, idCcd, uPspAddr, pvVal, cbVal);
 }
@@ -262,7 +262,7 @@ int sevProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPsp
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioWrite}
  */
-int sevProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
+static int sevProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
 {
     return sevProvCtxPspMemWrite(hProvCtx, idCcd, uPspAddr, pvVal, cbVal);
 }
@@ -271,7 +271,7 @@ int sevProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPs
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemRead}
  */
-int sevProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
+static int sevProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_psp_x86_rw Req;
@@ -289,7 +289,7 @@ int sevProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR P
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemWrite}
  */
-int sevProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
+static int sevProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_psp_x86_rw Req;
@@ -307,7 +307,7 @@ int sevProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioRead}
  */
-int sevProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
+static int sevProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
 {
     return sevProvCtxPspX86MemRead(hProvCtx, idCcd, PhysX86Addr, pvVal, cbVal);
 }
@@ -316,7 +316,7 @@ int sevProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioWrite}
  */
-int sevProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
+static int sevProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
 {
     return sevProvCtxPspX86MemWrite(hProvCtx, idCcd, PhysX86Addr, pvVal, cbVal);
 }
@@ -325,7 +325,7 @@ int sevProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSvcCall}
  */
-int sevProvCtxPspSvcCall(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return)
+static int sevProvCtxPspSvcCall(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_psp_stub_svc_call Req;
@@ -348,7 +348,7 @@ int sevProvCtxPspSvcCall(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idxS
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86SmnRead}
  */
-int sevProvCtxX86SmnRead(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
+static int sevProvCtxX86SmnRead(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_smn_rw Req;
@@ -371,7 +371,7 @@ int sevProvCtxX86SmnRead(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSmn
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86SmnWrite}
  */
-int sevProvCtxX86SmnWrite(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
+static int sevProvCtxX86SmnWrite(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_smn_rw Req;
@@ -391,7 +391,7 @@ int sevProvCtxX86SmnWrite(PSPPROXYPROVCTX hProvCtx, uint16_t idNode, SMNADDR uSm
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86MemAlloc}
  */
-int sevProvCtxX86MemAlloc(PSPPROXYPROVCTX hProvCtx, uint32_t cbMem, R0PTR *pR0KernVirtual, X86PADDR *pPhysX86Addr)
+static int sevProvCtxX86MemAlloc(PSPPROXYPROVCTX hProvCtx, uint32_t cbMem, R0PTR *pR0KernVirtual, X86PADDR *pPhysX86Addr)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_mem_alloc Req;
@@ -416,7 +416,7 @@ int sevProvCtxX86MemAlloc(PSPPROXYPROVCTX hProvCtx, uint32_t cbMem, R0PTR *pR0Ke
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86MemFree}
  */
-int sevProvCtxX86MemFree(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtual)
+static int sevProvCtxX86MemFree(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtual)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_mem_free Req;
@@ -431,7 +431,7 @@ int sevProvCtxX86MemFree(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtual)
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86MemRead}
  */
-int sevProvCtxX86MemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, R0PTR R0KernVirtualSrc, uint32_t cbRead)
+static int sevProvCtxX86MemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, R0PTR R0KernVirtualSrc, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_mem_rw Req;
@@ -448,7 +448,7 @@ int sevProvCtxX86MemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, R0PTR R0KernVirt
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86MemWrite}
  */
-int sevProvCtxX86MemWrite(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtualDst, const void *pvSrc, uint32_t cbWrite)
+static int sevProvCtxX86MemWrite(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtualDst, const void *pvSrc, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     struct sev_user_data_x86_mem_rw Req;
@@ -465,7 +465,7 @@ int sevProvCtxX86MemWrite(PSPPROXYPROVCTX hProvCtx, R0PTR R0KernVirtualDst, cons
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86PhysMemRead}
  */
-int sevProvCtxX86PhysMemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, X86PADDR PhysX86AddrSrc, uint32_t cbRead)
+static int sevProvCtxX86PhysMemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, X86PADDR PhysX86AddrSrc, uint32_t cbRead)
 {
     (void)hProvCtx; /* Not required here. */
 
@@ -533,7 +533,7 @@ int sevProvCtxX86PhysMemRead(PSPPROXYPROVCTX hProvCtx, void *pvDst, X86PADDR Phy
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxX86PhysMemWrite}
  */
-int sevProvCtxX86PhysMemWrite(PSPPROXYPROVCTX hProvCtx, X86PADDR PhysX86AddrDst, const void *pvSrc, uint32_t cbWrite)
+static int sevProvCtxX86PhysMemWrite(PSPPROXYPROVCTX hProvCtx, X86PADDR PhysX86AddrDst, const void *pvSrc, uint32_t cbWrite)
 {
     (void)hProvCtx; /* Not required here. */
 

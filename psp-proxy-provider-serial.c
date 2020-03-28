@@ -446,7 +446,7 @@ static int serialProvCtxSetTermiosCfg(PPSPPROXYPROVCTXINT pThis, uint32_t u32Bau
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     char *pszDevPath = NULL;
@@ -490,7 +490,7 @@ int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxDestroy}
  */
-void serialProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
+static void serialProvCtxDestroy(PSPPROXYPROVCTX hProvCtx)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
 
@@ -513,7 +513,7 @@ static int serialProvCtxQueryInfo(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPA
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnRead}
  */
-int serialProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
+static int serialProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspSmnRead(pThis->hPduCtx, idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
@@ -523,7 +523,7 @@ int serialProvCtxPspSmnRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t i
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspSmnWrite}
  */
-int serialProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
+static int serialProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspSmnWrite(pThis->hPduCtx, idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
@@ -533,7 +533,7 @@ int serialProvCtxPspSmnWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, uint32_t 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemRead}
  */
-int serialProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
+static int serialProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMemRead(pThis->hPduCtx, idCcd, uPspAddr, pvBuf, cbRead);
@@ -543,7 +543,7 @@ int serialProvCtxPspMemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uP
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMemWrite}
  */
-int serialProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
+static int serialProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMemWrite(pThis->hPduCtx, idCcd, uPspAddr, pvBuf, cbWrite);
@@ -553,7 +553,7 @@ int serialProvCtxPspMemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR u
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioRead}
  */
-int serialProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
+static int serialProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMmioRead(pThis->hPduCtx, idCcd, uPspAddr, pvVal, cbVal);
@@ -563,7 +563,7 @@ int serialProvCtxPspMmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR u
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspMmioWrite}
  */
-int serialProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
+static int serialProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR uPspAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspMmioWrite(pThis->hPduCtx, idCcd, uPspAddr, pvVal, cbVal);
@@ -573,7 +573,7 @@ int serialProvCtxPspMmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, PSPADDR 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemRead}
  */
-int serialProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
+static int serialProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, void *pvBuf, uint32_t cbRead)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MemRead(pThis->hPduCtx, idCcd, PhysX86Addr, pvBuf, cbRead);
@@ -583,7 +583,7 @@ int serialProvCtxPspX86MemRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MemWrite}
  */
-int serialProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
+static int serialProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MemWrite(pThis->hPduCtx, idCcd, PhysX86Addr, pvBuf, cbWrite);
@@ -593,7 +593,7 @@ int serialProvCtxPspX86MemWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PAD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioRead}
  */
-int serialProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
+static int serialProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MmioRead(pThis->hPduCtx, idCcd, PhysX86Addr, pvVal, cbVal);
@@ -603,7 +603,7 @@ int serialProvCtxPspX86MmioRead(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PAD
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxPspX86MmioWrite}
  */
-int serialProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
+static int serialProvCtxPspX86MmioWrite(PSPPROXYPROVCTX hProvCtx, uint32_t idCcd, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     return pspStubPduCtxPspX86MmioWrite(pThis->hPduCtx, idCcd, PhysX86Addr, pvVal, cbVal);

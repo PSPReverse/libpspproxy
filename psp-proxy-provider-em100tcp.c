@@ -89,10 +89,14 @@ typedef struct SPIMSGCHANHDR
     SPIRINGBUF                      Ext2PspRingBuf;
     /** The PSP -> EXT ring buffer header. */
     SPIRINGBUF                      Psp2ExtRingBuf;
+    /** The message channel header magic, must be last. */
+    uint32_t                        u32Magic;
 } SPIMSGCHANHDR;
 
 /** Where in the flash the message channel is located. */
-#define SPI_MSG_CHAN_HDR_OFF 0xaab000
+#define SPI_MSG_CHAN_HDR_OFF   0xaab000
+/** THe magic vaue to identify the message channel header (J. R. R. Tolkien). */
+#define SPI_MSG_CHAN_HDR_MAGIC 0x18920103
 
 
 /**
@@ -202,6 +206,7 @@ static int em100TcpSpiFlashWrite(PPSPPROXYPROVCTXINT pThis, uint32_t u32AddrStar
  */
 static int em100TcpSpiMsgBufferInit(PPSPPROXYPROVCTXINT pThis)
 {
+    pThis->MsgChanHdr.u32Magic      = SPI_MSG_CHAN_HDR_MAGIC;
     pThis->MsgChanHdr.offExt2PspBuf = sizeof(SPIMSGCHANHDR);
     pThis->MsgChanHdr.offPsp2ExtBuf = sizeof(SPIMSGCHANHDR) + _4K;
     pThis->MsgChanHdr.Ext2PspRingBuf.cbRingBuf = _4K;
@@ -331,7 +336,8 @@ static int em100TcpSpiMsgBufferWrite(PPSPPROXYPROVCTXINT pThis, const void *pvBu
         if (!rc)
         {
             /* Check whether we have room to write the data into the ring buffer. */
-            size_t cbThisWrite = em100TcpSpiMsgBufferGetWrite(&pThis->MsgChanHdr.Ext2PspRingBuf);
+            size_t cbThisWrite = MIN(cbWriteLeft,
+                                     em100TcpSpiMsgBufferGetWrite(&pThis->MsgChanHdr.Ext2PspRingBuf));
             if (cbThisWrite)
             {
                 /* Write the data. */
@@ -378,7 +384,8 @@ static int em100TcpSpiMsgBufferRead(PPSPPROXYPROVCTXINT pThis, void *pvBuf, size
         if (!rc)
         {
             /* Check whether we have room to write the data into the ring buffer. */
-            size_t cbThisRead = em100TcpSpiMsgBufferGetRead(&pThis->MsgChanHdr.Psp2ExtRingBuf);
+            size_t cbThisRead = MIN(cbReadLeft,
+                                    em100TcpSpiMsgBufferGetRead(&pThis->MsgChanHdr.Psp2ExtRingBuf));
             if (cbThisRead)
             {
                 /* Write the data. */

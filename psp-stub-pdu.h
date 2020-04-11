@@ -95,6 +95,16 @@ typedef struct PSPSTUBPDUIOIF
      */
     int    (*pfnInterrupt) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser);
 
+    /**
+     * Notifies about a received log message.
+     *
+     * @returns nothing.
+     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
+     * @param   pvUser              Opaque user data passed during creation of the stub context.
+     * @param   pszMsg              Received log message.
+     */
+    void   (*pfnLogMsg) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const char *pszMsg);
+
 } PSPSTUBPDUIOIF;
 /** Pointer to a I/O interface callback table. */
 typedef PSPSTUBPDUIOIF *PPSPSTUBPDUIOIF;

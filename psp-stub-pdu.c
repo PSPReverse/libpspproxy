@@ -88,6 +88,10 @@ typedef struct PSPSTUBPDUCTXINT
     uint32_t                    cCcdsPerSocket;
     /** Total number of CCDs in the remote system. */
     uint32_t                    cCcds;
+    /** Log message buffer. */
+    char                        achLogMsg[1024];
+    /** Number of bytes valid in the log message buffer. */
+    size_t                      cchLogMsgAvail;
 } PSPSTUBPDUCTXINT;
 /** Pointer to an internal PSP proxy context. */
 typedef PSPSTUBPDUCTXINT *PPSPSTUBPDUCTXINT;
@@ -288,6 +292,53 @@ static int pspStubPduCtxRecv(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *ppPduRc
 /**
  * Waits for a PDU with the specific ID to be received.
  *
+ * @returns nothing.
+ * @param   pThis                   The serial stub instance data.
+ * @param   pPdu                    The log message PDU.
+ */
+static void pspStubPduCtxLogMsgHandle(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR pPdu)
+{
+    size_t cchMsg = pPdu->u.Fields.cbPdu;
+    const char *pbMsg = (const char *)(pPdu + 1);
+
+    /* Drop any log message PDU which is too big to fit into the message buffer. */
+    if (sizeof(pThis->achLogMsg) - pThis->cchLogMsgAvail >= cchMsg)
+    {
+        memcpy(&pThis->achLogMsg[pThis->cchLogMsgAvail], pbMsg, cchMsg);
+        pThis->cchLogMsgAvail += cchMsg;
+
+        for (;;)
+        {
+            /* Parse the buffer for newlines and hand them over to the callback. */
+            char *pszNewLine = strchr(&pThis->achLogMsg[0], '\n');
+            if (pszNewLine)
+            {
+                /* Terminate the string after the newline. */
+                pszNewLine++;
+                char chOld = *pszNewLine;
+                *pszNewLine = '\0';
+
+                pThis->pIoIf->pfnLogMsg(pThis, pThis->pvUser, &pThis->achLogMsg[0]);
+                /* Restore old value and move everything remaining to the front, clearing out the remainder. */
+                *pszNewLine = chOld;
+                size_t cchMsg = pszNewLine - &pThis->achLogMsg[0];
+                /** @todo assert(cchMsg <= pThis->cchLogMsgAvail) */
+                memmove(&pThis->achLogMsg[0], pszNewLine, pThis->cchLogMsgAvail - cchMsg);
+                pThis->cchLogMsgAvail -= cchMsg;
+                memset(&pThis->achLogMsg[pThis->cchLogMsgAvail], 0, sizeof(pThis->achLogMsg) - pThis->cchLogMsgAvail);
+                if (!pThis->cchLogMsgAvail)
+                    break;
+            }
+            else
+                break;
+        }
+    }
+}
+
+
+/**
+ * Waits for a PDU with the specific ID to be received.
+ *
  * @returns Status code.
  * @param   pThis                   The serial stub instance data.
  * @param   enmRrnId                The PDU ID to wait for.
@@ -310,8 +361,12 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
             if (pPdu->u.Fields.enmRrnId != enmRrnId)
             {
                 /* Log notifications are ignored for now. */
-                if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_LOG_MSG)
+                if (   pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_LOG_MSG
+                    && pThis->pIoIf->pfnLogMsg)
+                {
+                    pspStubPduCtxLogMsgHandle(pThis, pPdu);
                     continue;
+                }
 
                 /*
                  * Beacons are only ignored if not in connected mode or when
@@ -511,6 +566,9 @@ void pspStubPduCtxDestroy(PSPSTUBPDUCTX hPduCtx)
 int pspStubPduCtxConnect(PSPSTUBPDUCTX hPduCtx, uint32_t cMillies)
 {
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    pThis->cchLogMsgAvail = 0;
+    memset(&pThis->achLogMsg[0], 0, sizeof(pThis->achLogMsg));
 
     /* Wait for a beacon PDU. */
     /** @todo Timeout handling. */

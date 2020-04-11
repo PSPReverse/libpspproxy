@@ -25,7 +25,11 @@ typedef uint64_t X86PADDR;
 typedef struct PSPPROXYCTXINT *PSPPROXYCTX;
 typedef PSPPROXYCTX *PPSPPROXYCTX;
 typedef uint64_t R0PTR;
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice);
+
+typedef void (FNPSPPROXYLOGMSGRECV)(PSPPROXYCTX hCtx, const char *pszMsg, void *pvUser);
+typedef FNPSPPROXYLOGMSGRECV *PFNPSPPROXYLOGMSGRECV;
+
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg, void *pvUser);
 void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
 int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
 int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);

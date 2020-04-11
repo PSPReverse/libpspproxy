@@ -8,7 +8,7 @@ class PSPProxy(object):
         self.rcLibLast   = 0;
 
         phCtx = ffi.new("PPSPPROXYCTX");
-        rcLib = lib.PSPProxyCtxCreate(phCtx, self.sDevicePath.encode("UTF-8"));
+        rcLib = lib.PSPProxyCtxCreate(phCtx, self.sDevicePath.encode("UTF-8"), None, None);
         if rcLib == 0:
             self.hCtx = phCtx[0];
         else:

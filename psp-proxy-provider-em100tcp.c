@@ -521,14 +521,17 @@ static const PSPSTUBPDUIOIF g_PduIoIf =
     /** pfnPoll */
     em100TcpProvPduIoIfPoll,
     /** pfnInterrupt */
-    em100TcpProvPduIoIfInterrupt
+    em100TcpProvPduIoIfInterrupt,
+    /** pfnLogMsg */
+    NULL
 };
 
 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-static int em100TcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int em100TcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                               void *pvUser)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     int rc = 0;

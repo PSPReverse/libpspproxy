@@ -48,8 +48,11 @@ typedef struct PSPPROXYPROV
      * @returns Status code.
      * @param   hProvCtx                Provider context instance data.
      * @param   pszDevice               The device to use, structure is provider specific.
+     * @param   pfnLogMsg               Callback handler for received log messages from the proxy.
+     * @param   pvUser                  Opaque user data to pass to the callback.
      */
-    int (*pfnCtxInit) (PSPPROXYPROVCTX hProvCtx, const char *pszDevice);
+    int (*pfnCtxInit) (PSPPROXYPROVCTX hProvCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                       void *pvUser);
 
     /**
      * Destroys the given provider context, freeing all allocated resources.

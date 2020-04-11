@@ -47,6 +47,10 @@ typedef struct PSPPROXYPROVCTXINT
     int                             iFdCon;
     /** The PDU context. */
     PSPSTUBPDUCTX                   hPduCtx;
+    /** Log message callback. */
+    PFNPSPPROXYLOGMSGRECV           pfnLogMsg;
+    /** Opaque user data to pass to the callback. */
+    void                            *pvUser;
 } PSPPROXYPROVCTXINT;
 /** Pointer to an internal PSP proxy context. */
 typedef PSPPROXYPROVCTXINT *PPSPPROXYPROVCTXINT;
@@ -148,6 +152,19 @@ static int tcpProvPduIoIfInterrupt(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser)
 
 
 /**
+ * @copydoc{PSPSTUBPDUIOIF,pfnLogMsg}
+ */
+static void tcpProvPduIoIfLogMsg(PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const char *pszMsg)
+{
+    (void)hPspStubPduCtx;
+    PPSPPROXYPROVCTXINT pStub = (PPSPPROXYPROVCTXINT)pvUser;
+
+    if (pStub->pfnLogMsg)
+        pStub->pfnLogMsg(NULL, pszMsg, pStub->pvUser);
+}
+
+
+/**
  * I/O interface callback table.
  */
 static const PSPSTUBPDUIOIF g_PduIoIf =
@@ -161,18 +178,24 @@ static const PSPSTUBPDUIOIF g_PduIoIf =
     /** pfnPoll */
     tcpProvPduIoIfPoll,
     /** pfnInterrupt */
-    tcpProvPduIoIfInterrupt
+    tcpProvPduIoIfInterrupt,
+    /** pfnLogMsg */
+    tcpProvPduIoIfLogMsg
 };
 
 
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-static int tcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int tcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                          void *pvUser)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     int rc = 0;
     char szDev[256]; /* Should be plenty. */
+
+    pThis->pfnLogMsg = pfnLogMsg;
+    pThis->pvUser    = pvUser;
 
     memset(&szDev[0], 0, sizeof(szDev));
     strncpy(&szDev[0], pszDevice, sizeof(szDev));

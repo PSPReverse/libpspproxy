@@ -40,13 +40,29 @@ typedef PSPPROXYCTX *PPSPPROXYCTX;
 
 
 /**
+ * Log message received callback.
+ *
+ * @returns nothing.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   pszMsg                  The received message.
+ * @param   pvUser                  Opaque user data passed during creation.
+ */
+typedef void (FNPSPPROXYLOGMSGRECV)(PSPPROXYCTX hCtx, const char *pszMsg, void *pvUser);
+/** Pointer to a log message received callback. */
+typedef FNPSPPROXYLOGMSGRECV *PFNPSPPROXYLOGMSGRECV;
+
+
+/**
  * Creates a new PSP proxy context for the given device.
  *
  * @returns Status code.
  * @param   phCtx                   Where to store the handle to the PSP proxy context on success.
  * @param   pszDevice               The device to use, usually /dev/sev.
+ * @param   pfnLogMsg               Callback handler for received log messages from the proxy.
+ * @param   pvUser                  Opaque user data to pass to the callback.
  */
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice);
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                      void *pvUser);
 
 /**
  * Destroys a given PSP proxy context.

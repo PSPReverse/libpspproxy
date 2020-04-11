@@ -82,7 +82,8 @@ static int sevProvCtxIoctl(PPSPPROXYPROVCTXINT pThis, uint32_t idCmd, void *pvAr
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-static int sevProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int sevProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                          void *pvUser)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     int rc = 0;

@@ -239,7 +239,9 @@ static const PSPSTUBPDUIOIF g_PduIoIf =
     /** pfnPoll */
     serialProvPduIoIfPoll,
     /** pfnInterrupt */
-    serialProvPduIoIfInterrupt
+    serialProvPduIoIfInterrupt,
+    /** pfnLogMsg */
+    NULL
 };
 
 
@@ -446,7 +448,8 @@ static int serialProvCtxSetTermiosCfg(PPSPPROXYPROVCTXINT pThis, uint32_t u32Bau
 /**
  * @copydoc{PSPPROXYPROV,pfnCtxInit}
  */
-static int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
+static int serialProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                             void *pvUser)
 {
     PPSPPROXYPROVCTXINT pThis = hProvCtx;
     char *pszDevPath = NULL;

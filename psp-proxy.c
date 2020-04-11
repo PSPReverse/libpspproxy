@@ -54,6 +54,10 @@ typedef struct PSPPROXYCTXINT
 {
     /** The current CCD ID set. */
     uint32_t                        idCcd;
+    /** Log message callback. */
+    PFNPSPPROXYLOGMSGRECV           pfnLogMsg;
+    /** Opaque user data to pass to the callback. */
+    void                            *pvUser;
     /** Flag whether the scratch space manager was initialized. */
     int                             fScratchSpaceMgrInit;
     /** List of free scratch space blocks, sorted by PSP address (lowest is head). */
@@ -157,7 +161,8 @@ static PCPSPPROXYPROV pspProxyCtxProvFind(const char *pszDevice, const char **pp
 }
 
 
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice)
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+                      void *pvUser)
 {
     int rc = 0;
 
@@ -169,9 +174,12 @@ int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice)
         if (pThis != NULL)
         {
             pThis->idCcd                = 0;
+            pThis->pfnLogMsg            = pfnLogMsg;
+            pThis->pvUser               = pvUser;
             pThis->fScratchSpaceMgrInit = 0;
             pThis->pProv                = pProv;
-            rc = pProv->pfnCtxInit((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pszDevRem);
+            rc = pProv->pfnCtxInit((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pszDevRem,
+                                   pfnLogMsg, pvUser);
             if (!rc)
             {
                 *phCtx = pThis;

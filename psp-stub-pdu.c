@@ -263,6 +263,8 @@ static int pspStubPduCtxRecv(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *ppPduRc
     do
     {
         rc = pThis->pProvIf->pfnCtxPoll(pThis->hProvCtx, cMillies);
+        if (rc == -2)
+            break;
         if (!rc)
         {
             size_t cbAvail = pThis->pProvIf->pfnCtxPeek(pThis->hProvCtx);
@@ -380,6 +382,8 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
     {
         PCPSPSERIALPDUHDR pPdu = NULL;
         rc = pspStubPduCtxRecv(pThis, &pPdu, cMillies);
+        if (rc == -2)
+            break;
         if (!rc)
         {
             if (pPdu->u.Fields.enmRrnId != enmRrnId)
@@ -854,13 +858,49 @@ int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t 
          * Code is running now, excercise the runloop until we receive a code module execution finished notification,
          * The runloop will handle all the I/O transfers.
          */
-        PCPSPSERIALPDUHDR pPdu = NULL;
-        PCPSPSERIALEXECCMFINISHEDNOT pExecNot = NULL;
-        size_t cbExecNot = 0;
-        rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_CODE_MOD_EXEC_FINISHED, &pPdu,
-                                 (void **)&pExecNot, &cbExecNot, cMillies);
-        if (!rc)
-            *pu32CmRet = pExecNot->u32CmRet;
+        do
+        {
+            PCPSPSERIALPDUHDR pPdu = NULL;
+            PCPSPSERIALEXECCMFINISHEDNOT pExecNot = NULL;
+            size_t cbExecNot = 0;
+            rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_CODE_MOD_EXEC_FINISHED, &pPdu,
+                                     (void **)&pExecNot, &cbExecNot, 1);
+            if (!rc)
+            {
+                if (pExecNot)
+                {
+                    *pu32CmRet = pExecNot->u32CmRet;
+                    break;
+                }
+            }
+            else if (rc == -2)
+            {
+                /* Nothing received for now, check input. */
+                rc = 0;
+                if (   pThis->pProxyIoIf
+                    && pThis->pProxyIoIf->pfnInBufPeek)
+                {
+                    size_t cbAvail = pThis->pProxyIoIf->pfnInBufPeek(pThis->hProxyCtx, pThis->pvProxyIoUser, 0);
+                    if (cbAvail)
+                    {
+                        uint8_t abBuf[512];
+                        size_t cbThisRead = MIN(cbAvail, sizeof(abBuf));
+                        rc = pThis->pProxyIoIf->pfnInBufRead(pThis->hProxyCtx, pThis->pvProxyIoUser,
+                                                             0 /*idInBuf*/, &abBuf[0], cbThisRead, NULL /*pcbRead*/);
+                        if (!rc)
+                        {
+                            PSPSERIALINBUFWRREQ InBufWrReq;
+
+                            InBufWrReq.idInBuf = 0;
+                            InBufWrReq.u32Pad0 = 0;
+                            rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_INPUT_BUF_WRITE,
+                                                        PSPSERIALPDURRNID_RESPONSE_INPUT_BUF_WRITE,
+                                                        &InBufWrReq, sizeof(InBufWrReq), &abBuf[0], cbThisRead, 10000);
+                        }
+                    }
+                }
+            }
+        } while (!rc);
     }
 
     return rc;

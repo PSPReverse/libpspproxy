@@ -184,14 +184,11 @@ static int tcpProvCtxPoll(PSPPROXYPROVCTX hProvCtx, uint32_t cMillies)
     PollFd.revents = 0;
 
     int rc = 0;
-    for (;;)
-    {
-        int rcPsx = poll(&PollFd, 1, cMillies);
-        if (rcPsx == 1)
-            break; /* Stop polling if the single descriptor has events. */
-        if (rcPsx == -1)
-            rc = -1; /** @todo Better status codes for the individual errors. */
-    }
+    int rcPsx = poll(&PollFd, 1, cMillies);
+    if (rcPsx == 0)
+        rc = -2;
+    else if (rcPsx == -1)
+        rc = -1; /** @todo Better status codes for the individual errors. */
 
     return rc;
 }

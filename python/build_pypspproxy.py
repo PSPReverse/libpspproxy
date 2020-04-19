@@ -26,10 +26,18 @@ typedef struct PSPPROXYCTXINT *PSPPROXYCTX;
 typedef PSPPROXYCTX *PPSPPROXYCTX;
 typedef uint64_t R0PTR;
 
-typedef void (FNPSPPROXYLOGMSGRECV)(PSPPROXYCTX hCtx, const char *pszMsg, void *pvUser);
-typedef FNPSPPROXYLOGMSGRECV *PFNPSPPROXYLOGMSGRECV;
+typedef struct PSPPROXYIOIF
+{
+    void (*pfnLogMsg) (PSPPROXYCTX hCtx, void *pvUser, const char *pszMsg);
+    int (*pfnOutBufWrite) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idOutBuf, const void *pvBuf, size_t cbBuf);
+    size_t (*pfnInBufPeek) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idInBuf);
+    int (*pfnInBufRead) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idInBuf, void *pvBuf, size_t cbRead, size_t *pcbRead);
 
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg, void *pvUser);
+} PSPPROXYIOIF;
+typedef PSPPROXYIOIF *PPSPPROXYIOIF;
+typedef const PSPPROXYIOIF *PCPSPPROXYIOIF;
+
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PCPSPPROXYIOIF pIoIf, void *pvUser);
 void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
 int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
 int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);

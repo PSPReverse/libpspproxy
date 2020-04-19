@@ -24,8 +24,13 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <termios.h>
 
 #include "libpspproxy.h"
+
+
+struct termios TermIosOld;
+
 
 /**
  * Loads the given file into memory.
@@ -97,7 +102,10 @@ static void cmToolProxyIoIfLogMsg(PSPPROXYCTX hCtx, void *pvUser, const char *ps
 static int cmToolProxyIoIfOutBufWrite(PSPPROXYCTX hCtx, void *pvUser, uint32_t idOutBuf, const void *pvBuf, size_t cbBuf)
 {
     if (idOutBuf == 0)
+    {
         printf("%.*s", cbBuf, (const char *)pvBuf);
+        fflush(stdout);
+    }
 
     return 0;
 }
@@ -161,6 +169,28 @@ static PSPPROXYIOIF g_ProxyIoIf =
 };
 
 
+static void cmToolTerminalCfg(void)
+{
+    setvbuf(stdin, NULL, _IONBF ,0);
+    setvbuf(stdout, NULL, _IONBF ,0);
+
+    /* Disable character echoing and enable raw mode on stdin. */
+    int rcPsx = tcgetattr(0, &TermIosOld);
+    if (!rcPsx)
+    {
+        struct termios TermIos = TermIosOld;
+
+        cfmakeraw(&TermIos);
+        tcsetattr(0, TCSANOW, &TermIos);
+    }
+}
+
+
+static void cmToolTerminalRestore(void)
+{
+    tcsetattr(0, TCSANOW, &TermIosOld);
+}
+
 int main(int argc, char *argv[])
 {
     void *pv = NULL;
@@ -176,8 +206,10 @@ int main(int argc, char *argv[])
             rc = PSPProxyCtxCodeModLoad(hCtx, pv, cb);
             if (!rc)
             {
+                cmToolTerminalCfg();
                 uint32_t u32CmRet = 0;
                 rc = PSPProxyCtxCodeModExec(hCtx, 0 /*u32Arg0*/, 0 /*u32Arg1*/, 0 /*u32Arg2*/, 0 /*u32Arg3*/, &u32CmRet, UINT32_MAX);
+                cmToolTerminalRestore();
                 if (!rc)
                     printf("Code module executed successfully and returned %#x\n", u32CmRet);
                 else

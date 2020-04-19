@@ -29,6 +29,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "psp-proxy-provider.h"
+
 
 /** Opaque PSP Stub PDU context handle. */
 typedef struct PSPSTUBPDUCTXINT *PSPSTUBPDUCTX;
@@ -37,90 +39,18 @@ typedef PSPSTUBPDUCTX *PPSPSTUBPDUCTX;
 
 
 /**
- * Stub PDU I/O interface callback table.
- */
-typedef struct PSPSTUBPDUIOIF
-{
-    /** 
-     * Returns amount of data available for reading (for optimized buffer allocations).
-     *
-     * @returns Amount of bytes available for reading.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     */
-    size_t (*pfnPeek) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser);
-
-    /**
-     * Read data from the underlying transport layer - non blocking.
-     *
-     * @returns Status code.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     * @param   pvDst               Where to store the read data.
-     * @param   cbRead              Maximum number of bytes to read.
-     * @param   pcbRead             Where to store the number of bytes actually read.
-     */
-    int    (*pfnRead) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, void *pvDst, size_t cbRead, size_t *pcbRead);
-
-    /** 
-     * Write a packet to the underlying transport layer.
-     *
-     * @returns Status code.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     * @param   pvPkt               The packet data to write.
-     * @param   cbPkt               The number of bytes to write.
-     *
-     * @note Unlike the read callback this should only return when the whole packet has been written
-     *       or an unrecoverable error occurred.
-     */
-    int    (*pfnWrite) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const void *pvPkt, size_t cbPkt);
-
-    /**
-     * Blocks until data is available for reading.
-     *
-     * @returns Status code.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     * @param   cMillies            Number of milliseconds to wait before returning a timeout error.
-     */
-    int    (*pfnPoll) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, uint32_t cMillies);
-
-    /**
-     * Interrupt any polling.
-     *
-     * @returns Status code.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     */
-    int    (*pfnInterrupt) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser);
-
-    /**
-     * Notifies about a received log message.
-     *
-     * @returns nothing.
-     * @param   hPspStubPduCtx      The PSP stub PDU context handle invoking the callback.
-     * @param   pvUser              Opaque user data passed during creation of the stub context.
-     * @param   pszMsg              Received log message.
-     */
-    void   (*pfnLogMsg) (PSPSTUBPDUCTX hPspStubPduCtx, void *pvUser, const char *pszMsg);
-
-} PSPSTUBPDUIOIF;
-/** Pointer to a I/O interface callback table. */
-typedef PSPSTUBPDUIOIF *PPSPSTUBPDUIOIF;
-/** Pointer to a const I/O interface callback table. */
-typedef const PSPSTUBPDUIOIF *PCPSPSTUBPDUIOIF;
-
-
-/**
  * Creates a new PSP Stub PDU context.
  *
  * @returns Status code.
  * @param   phPduCtx                Where to store the handle to the context on success.
- * @param   pIoIf                   The I/O interface callback table to use.
- * @param   pvUser                  Opaque user data to pass to the I/O interface callbacks.
+ * @param   pProvIf                 The provider interface.
+ * @param   hProvCtx                The provider context handle to use.
+ * @param   pProxyIoIf              Proxy I/O interface callback table.
+ * @param   hProxyCtx               The proxy context handle to pass to callbacks in pProxyIoIf.
+ * @param   pvUser                  Opaque user data to pass to the callbacks in pProxyIoIf.
  */
-int pspStubPduCtxCreate(PPSPSTUBPDUCTX phPduCtx, PCPSPSTUBPDUIOIF pIoIf, void *pvUser);
+int pspStubPduCtxCreate(PPSPSTUBPDUCTX phPduCtx, PCPSPPROXYPROV pProvIf, PSPPROXYPROVCTX hProvCtx,
+                        PCPSPPROXYIOIF pProxyIoIf, PSPPROXYCTX hProxyCtx, void *pvUser);
 
 
 /**
@@ -286,5 +216,35 @@ int pspStubPduCtxPspX86MmioRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR 
  * @param   cbVal                   Size of the register, vaid are 1, 2, 4 or 8 byte.
  */
 int pspStubPduCtxPspX86MmioWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR PhysX86Addr, const void *pvVal, uint32_t cbVal);
+
+
+/**
+ * Loads a code module on the given PSP.
+ *
+ * @returns Status code.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   idCcd                   The CCD ID for the request.
+ * @param   pvCm                    The code module bits.
+ * @param   cbCm                    Size of the code module in bytes.
+ */
+int pspStubPduCtxPspCodeModLoad(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, const void *pvCm, size_t cbCm);
+
+
+/**
+ * Executes a previously loaded code module on the given PSP.
+ *
+ * @returns Status code.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   idCcd                   The CCD ID for the request.
+ * @param   u32Arg0                 Argument 0.
+ * @param   u32Arg1                 Argument 1.
+ * @param   u32Arg2                 Argument 2.
+ * @param   u32Arg3                 Argument 3.
+ * @param   pu32CmRet               Where to store the return value of the code module upon return.
+ * @param   cMillies                How long to wait for the code module to finish exeucting until a timeout
+ *                                  error is returned.
+ */
+int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t u32Arg0, uint32_t u32Arg1,
+                                uint32_t u32Arg2, uint32_t u32Arg3, uint32_t *pu32CmRet, uint32_t cMillies);
 
 #endif /* !__psp_stub_pdu_h */

@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include "psp-proxy-provider.h"
+#include "psp-stub-pdu.h"
 
 
 /**
@@ -54,9 +55,9 @@ typedef struct PSPPROXYCTXINT
 {
     /** The current CCD ID set. */
     uint32_t                        idCcd;
-    /** Log message callback. */
-    PFNPSPPROXYLOGMSGRECV           pfnLogMsg;
-    /** Opaque user data to pass to the callback. */
+    /** I/O interface. */
+    PCPSPPROXYIOIF                  pIoIf;
+    /** Opaque user data to pass to the I/O interface callbacks. */
     void                            *pvUser;
     /** Flag whether the scratch space manager was initialized. */
     int                             fScratchSpaceMgrInit;
@@ -64,6 +65,8 @@ typedef struct PSPPROXYCTXINT
     PPSPSCRATCHCHUNKFREE            pScratchFreeHead;
     /** The provider used. */
     PCPSPPROXYPROV                  pProv;
+    /** The stub PDU context. */
+    PSPSTUBPDUCTX                   hPduCtx;
     /** The provider specific context data, variable in size. */
     uint8_t                         abProvCtx[1];
 } PSPPROXYCTXINT;
@@ -71,20 +74,20 @@ typedef struct PSPPROXYCTXINT
 typedef PSPPROXYCTXINT *PPSPPROXYCTXINT;
 
 
-extern const PSPPROXYPROV g_PspProxyProvSev;
+//extern const PSPPROXYPROV g_PspProxyProvSev;
 extern const PSPPROXYPROV g_PspProxyProvSerial;
 extern const PSPPROXYPROV g_PspProxyProvTcp;
-extern const PSPPROXYPROV g_PspProxyProvEm100Tcp;
+//extern const PSPPROXYPROV g_PspProxyProvEm100Tcp;
 
 /**
  * Array of known PSP proxy providers.
  */
 static PCPSPPROXYPROV g_apPspProxyProv[] =
 {
-    &g_PspProxyProvSev,
+//    &g_PspProxyProvSev,
     &g_PspProxyProvSerial,
     &g_PspProxyProvTcp,
-    &g_PspProxyProvEm100Tcp,
+//    &g_PspProxyProvEm100Tcp,
     NULL
 };
 
@@ -100,8 +103,7 @@ static int pspProxyCtxScratchSpaceMgrInit(PPSPPROXYCTXINT pThis)
     PSPADDR PspAddrScratchStart = 0;
     size_t cbScratch = 0;
 
-    int rc = pThis->pProv->pfnCtxQueryInfo((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd,
-                                            &PspAddrScratchStart, &cbScratch);
+    int rc = pspStubPduCtxQueryInfo(pThis->hPduCtx, pThis->idCcd, &PspAddrScratchStart, &cbScratch);
     if (!rc)
     {
         /* Set up the first chunk covering the whole scratch space area. */
@@ -161,7 +163,7 @@ static PCPSPPROXYPROV pspProxyCtxProvFind(const char *pszDevice, const char **pp
 }
 
 
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PCPSPPROXYIOIF pIoIf,
                       void *pvUser)
 {
     int rc = 0;
@@ -174,16 +176,29 @@ int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGM
         if (pThis != NULL)
         {
             pThis->idCcd                = 0;
-            pThis->pfnLogMsg            = pfnLogMsg;
+            pThis->pIoIf                = pIoIf;
             pThis->pvUser               = pvUser;
             pThis->fScratchSpaceMgrInit = 0;
             pThis->pProv                = pProv;
-            rc = pProv->pfnCtxInit((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pszDevRem,
-                                   pfnLogMsg, pvUser);
+            rc = pProv->pfnCtxInit((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pszDevRem);
             if (!rc)
             {
-                *phCtx = pThis;
-                return 0;
+                /* Create the PDU context. */
+                rc = pspStubPduCtxCreate(&pThis->hPduCtx, pProv, (PSPPROXYPROVCTX)&pThis->abProvCtx[0],
+                                         pIoIf, pThis, pvUser);
+                if (!rc)
+                {
+                    rc = pspStubPduCtxConnect(pThis->hPduCtx, 10 * 1000);
+                    if (!rc)
+                    {
+                        *phCtx = pThis;
+                        return 0;
+                    }
+
+                    pspStubPduCtxDestroy(pThis->hPduCtx);
+                }
+
+                pThis->pProv->pfnCtxDestroy((PSPPROXYPROVCTX)&pThis->abProvCtx[0]);
             }
 
             free(pThis);
@@ -202,6 +217,7 @@ void PSPProxyCtxDestroy(PSPPROXYCTX hCtx)
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
+    pspStubPduCtxDestroy(pThis->hPduCtx);
     pThis->pProv->pfnCtxDestroy((PSPPROXYPROVCTX)&pThis->abProvCtx[0]);
     free(pThis);
 }
@@ -224,7 +240,7 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
     if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
         return -1;
 
-    return pThis->pProv->pfnCtxPspSmnRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
+    return pspStubPduCtxPspSmnRead(pThis->hPduCtx, pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
 }
 
 
@@ -235,7 +251,7 @@ int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr
     if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
         return -1;
 
-    return pThis->pProv->pfnCtxPspSmnWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
+    return pspStubPduCtxPspSmnWrite(pThis->hPduCtx, pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
 }
 
 
@@ -243,7 +259,7 @@ int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint3
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspMemRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, pvBuf, cbRead);
+    return pspStubPduCtxPspMemRead(pThis->hPduCtx, pThis->idCcd, uPspAddr, pvBuf, cbRead);
 }
 
 
@@ -251,7 +267,7 @@ int PSPProxyCtxPspMemWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, const void *pvBuf
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspMemWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, pvBuf, cbWrite);
+    return pspStubPduCtxPspMemWrite(pThis->hPduCtx, pThis->idCcd, uPspAddr, pvBuf, cbWrite);
 }
 
 
@@ -259,7 +275,7 @@ int PSPProxyCtxPspMmioRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, v
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspMmioRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, cbVal, pvVal);
+    return pspStubPduCtxPspMmioRead(pThis->hPduCtx, pThis->idCcd, uPspAddr, pvVal, cbVal);
 }
 
 
@@ -267,7 +283,7 @@ int PSPProxyCtxPspMmioWrite(PSPPROXYCTX hCtx, PSPADDR uPspAddr, uint32_t cbVal, 
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspMmioWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, uPspAddr, cbVal, pvVal);
+    return pspStubPduCtxPspMmioWrite(pThis->hPduCtx, pThis->idCcd, uPspAddr, pvVal, cbVal);
 }
 
 
@@ -275,7 +291,7 @@ int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspX86MemRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, pvBuf, cbRead);
+    return pspStubPduCtxPspX86MemRead(pThis->hPduCtx, pThis->idCcd, PhysX86Addr, pvBuf, cbRead);
 }
 
 
@@ -283,7 +299,7 @@ int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspX86MemWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, pvBuf, cbWrite);
+    return pspStubPduCtxPspX86MemWrite(pThis->hPduCtx, pThis->idCcd, PhysX86Addr, pvBuf, cbWrite);
 }
 
 
@@ -291,7 +307,7 @@ int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t c
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspX86MmioRead((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, cbVal, pvVal);
+    return pspStubPduCtxPspX86MmioRead(pThis->hPduCtx, pThis->idCcd, PhysX86Addr, pvVal, cbVal);
 }
 
 
@@ -299,7 +315,7 @@ int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t 
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    return pThis->pProv->pfnCtxPspX86MmioWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd, PhysX86Addr, cbVal, pvVal);
+    return pspStubPduCtxPspX86MmioWrite(pThis->hPduCtx, pThis->idCcd, PhysX86Addr, pvVal, cbVal);
 }
 
 
@@ -307,9 +323,11 @@ int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0,
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
+#if 0 /** @todo Reintroduce again. */
     if (pThis->pProv->pfnCtxPspSvcCall)
         return pThis->pProv->pfnCtxPspSvcCall((PSPPROXYPROVCTX)&pThis->abProvCtx[0], pThis->idCcd,
                                               idxSyscall, u32R0, u32R1, u32R2, u32R3, pu32R0Return);
+#endif
 
     return -1;
 }
@@ -379,8 +397,10 @@ int PSPProxyCtxX86MemWrite(PSPPROXYCTX hCtx, R0PTR R0KernVirtualDst, const void 
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
+#if 0 /** @todo Reintroduce again. */
     if (pThis->pProv->pfnCtxX86MemWrite)
         return pThis->pProv->pfnCtxX86MemWrite((PSPPROXYPROVCTX)&pThis->abProvCtx[0], R0KernVirtualDst, pvSrc, cbWrite);
+#endif
 
     return -1;
 }
@@ -591,5 +611,21 @@ int PSPProxyCtxScratchSpaceFree(PSPPROXYCTX hCtx, PSPADDR PspAddr, size_t cb)
     }
 
     return 0;
+}
+
+int PSPProxyCtxCodeModLoad(PSPPROXYCTX hCtx, const void *pvCm, size_t cbCm)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxPspCodeModLoad(pThis->hPduCtx, pThis->idCcd, pvCm, cbCm);
+}
+
+int PSPProxyCtxCodeModExec(PSPPROXYCTX hCtx, uint32_t u32Arg0, uint32_t u32Arg1, uint32_t u32Arg2, uint32_t u32Arg3,
+                           uint32_t *pu32CmRet, uint32_t cMillies)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxPspCodeModExec(pThis->hPduCtx, pThis->idCcd, u32Arg0, u32Arg1, u32Arg2, u32Arg3,
+                                       pu32CmRet, cMillies);
 }
 

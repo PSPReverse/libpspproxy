@@ -5,10 +5,8 @@ project(libpspproxy VERSION 0.1.0 DESCRIPTION "Userspace library to interface wi
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIN_PSP_EMULATOR")
 add_library(pspproxy SHARED
     psp-proxy.c
-    psp-proxy-provider-sev.c
     psp-proxy-provider-serial.c
     psp-proxy-provider-tcp.c
-    psp-proxy-provider-em100tcp.c
     psp-stub-pdu.c
 )
 
@@ -21,10 +19,8 @@ target_include_directories(pspproxy PRIVATE psp-includes)
 
 add_library(pspproxystatic STATIC
     psp-proxy.c
-    psp-proxy-provider-sev.c
     psp-proxy-provider-serial.c
     psp-proxy-provider-tcp.c
-    psp-proxy-provider-em100tcp.c
     psp-stub-pdu.c
 )
 set_target_properties(pspproxystatic PROPERTIES OUTPUT_NAME pspproxy)

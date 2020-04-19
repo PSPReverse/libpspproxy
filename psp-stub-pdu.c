@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <psp-stub/psp-serial-stub.h>
 
@@ -55,11 +56,16 @@ typedef enum PSPSERIALPDURECVSTATE
  */
 typedef struct PSPSTUBPDUCTXINT
 {
-    /** I/O interface pointer. */
-    PCPSPSTUBPDUIOIF            pIoIf;
-    /** The Opauqe user data to pass to the I/O interface callbacks. */
-    void                        *pvUser;
-
+    /** Proxy provider interface table. */
+    PCPSPPROXYPROV              pProvIf;
+    /** Proxy provider handle. */
+    PSPPROXYPROVCTX             hProvCtx;
+    /** Proxy I/O interface callbacks. */
+    PCPSPPROXYIOIF              pProxyIoIf;
+    /** Proxy context handle. */
+    PSPPROXYCTX                 hProxyCtx;
+    /** Opaque user data to pass to the pProxyIoIf callbacks. */
+    void                        *pvProxyIoUser;
     /** Number of PDUs sent so far. */
     uint32_t                    cPdusSent;
     /** Next PDU counter value expected for a received PDU. */
@@ -256,17 +262,17 @@ static int pspStubPduCtxRecv(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *ppPduRc
     /** @todo Timeout handling. */
     do
     {
-        rc = pThis->pIoIf->pfnPoll(pThis, pThis->pvUser, cMillies);
+        rc = pThis->pProvIf->pfnCtxPoll(pThis->hProvCtx, cMillies);
         if (!rc)
         {
-            size_t cbAvail = pThis->pIoIf->pfnPeek(pThis, pThis->pvUser);
+            size_t cbAvail = pThis->pProvIf->pfnCtxPeek(pThis->hProvCtx);
             if (cbAvail)
             {
                 /* Only read what is required for the current state. */
                 /** @todo If the connection turns out to be unreliable we have to do a marker search first. */
                 size_t cbThisRecv = MIN(cbAvail, pThis->cbPduRecvLeft);
 
-                rc = pThis->pIoIf->pfnRead(pThis, pThis->pvUser, &pThis->abPdu[pThis->offPduRecv], cbThisRecv, &cbThisRecv);
+                rc = pThis->pProvIf->pfnCtxRead(pThis->hProvCtx, &pThis->abPdu[pThis->offPduRecv], cbThisRecv, &cbThisRecv);
                 if (!rc)
                 {
                     pThis->offPduRecv    += cbThisRecv;
@@ -318,7 +324,7 @@ static void pspStubPduCtxLogMsgHandle(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR
                 char chOld = *pszNewLine;
                 *pszNewLine = '\0';
 
-                pThis->pIoIf->pfnLogMsg(pThis, pThis->pvUser, &pThis->achLogMsg[0]);
+                pThis->pProxyIoIf->pfnLogMsg(pThis->hProxyCtx, pThis->pvProxyIoUser, &pThis->achLogMsg[0]);
                 /* Restore old value and move everything remaining to the front, clearing out the remainder. */
                 *pszNewLine = chOld;
                 size_t cchMsg = pszNewLine - &pThis->achLogMsg[0];
@@ -333,6 +339,24 @@ static void pspStubPduCtxLogMsgHandle(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR
                 break;
         }
     }
+}
+
+
+/**
+ * handles an output buffer write.
+ *
+ * @returns nothing.
+ * @param   pThis                   The serial stub instance data.
+ * @param   pPdu                    The log message PDU.
+ */
+static void pspStubPduCtxOutBufWriteHandle(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR pPdu)
+{
+    PCPSPSERIALOUTBUFNOT pNot = (PCPSPSERIALOUTBUFNOT)(pPdu + 1);
+    const uint8_t *pbData = (const uint8_t *)(pNot + 1);
+    size_t cbData = pPdu->u.Fields.cbPdu - sizeof(*pNot);
+
+    pThis->pProxyIoIf->pfnOutBufWrite(pThis->hProxyCtx, pThis->pvProxyIoUser, pNot->idOutBuf,
+                                      pbData, cbData);
 }
 
 
@@ -360,11 +384,19 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
         {
             if (pPdu->u.Fields.enmRrnId != enmRrnId)
             {
-                /* Log notifications are ignored for now. */
                 if (   pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_LOG_MSG
-                    && pThis->pIoIf->pfnLogMsg)
+                    && pThis->pProxyIoIf
+                    && pThis->pProxyIoIf->pfnLogMsg)
                 {
                     pspStubPduCtxLogMsgHandle(pThis, pPdu);
+                    continue;
+                }
+
+                if (   pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_OUT_BUF
+                    && pThis->pProxyIoIf
+                    && pThis->pProxyIoIf->pfnOutBufWrite)
+                {
+                    pspStubPduCtxOutBufWriteHandle(pThis, pPdu);
                     continue;
                 }
 
@@ -440,11 +472,11 @@ static int pspStubPduCtxSend(PPSPSTUBPDUCTXINT pThis, uint32_t idCcd, PSPSERIALP
     PduFooter.u32Magic  = PSP_SERIAL_EXT_2_PSP_PDU_END_MAGIC;
 
     /* Send everything, header first, then payload and footer last. */
-    int rc = pThis->pIoIf->pfnWrite(pThis, pThis->pvUser, &PduHdr, sizeof(PduHdr));
+    int rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, &PduHdr, sizeof(PduHdr));
     if (!rc && pvPayload && cbPayload)
-        rc = pThis->pIoIf->pfnWrite(pThis, pThis->pvUser, pvPayload, cbPayload);
+        rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, pvPayload, cbPayload);
     if (!rc)
-        rc = pThis->pIoIf->pfnWrite(pThis, pThis->pvUser, &PduFooter, sizeof(PduFooter));
+        rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, &PduFooter, sizeof(PduFooter));
 
     return rc;
 }
@@ -534,17 +566,21 @@ static int pspStubPduCtxReqRespWr(PPSPSTUBPDUCTXINT pThis, uint32_t idCcd, PSPSE
 }
 
 
-int pspStubPduCtxCreate(PPSPSTUBPDUCTX phPduCtx, PCPSPSTUBPDUIOIF pIoIf, void *pvUser)
+int pspStubPduCtxCreate(PPSPSTUBPDUCTX phPduCtx, PCPSPPROXYPROV pProvIf, PSPPROXYPROVCTX hProvCtx,
+                        PCPSPPROXYIOIF pProxyIoIf, PSPPROXYCTX hProxyCtx, void *pvUser)
 {
     int rc = 0;
     PPSPSTUBPDUCTXINT pThis = (PPSPSTUBPDUCTXINT)calloc(1, sizeof(*pThis));
     if (pThis)
     {
-        pThis->pIoIf        = pIoIf;
-        pThis->pvUser       = pvUser;
-        pThis->cBeaconsSeen = 0;
-        pThis->cCcds        = 1; /* To make validation succeed during the initial connect phase. */
-        pThis->fConnect     = false;
+        pThis->pProvIf       = pProvIf;
+        pThis->hProvCtx      = hProvCtx;
+        pThis->pProxyIoIf    = pProxyIoIf;
+        pThis->hProxyCtx     = hProxyCtx;
+        pThis->pvProxyIoUser = pvUser;
+        pThis->cBeaconsSeen  = 0;
+        pThis->cCcds         = 1; /* To make validation succeed during the initial connect phase. */
+        pThis->fConnect      = false;
         pspStubPduCtxRecvReset(pThis);
         *phPduCtx = pThis;
     }
@@ -755,5 +791,78 @@ int pspStubPduCtxPspX86MmioWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR
     return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MMIO_WRITE,
                                   PSPSERIALPDURRNID_RESPONSE_PSP_X86_MMIO_WRITE,
                                   &Req, sizeof(Req), pvVal, cbVal, 10000);
+}
+
+
+int pspStubPduCtxPspCodeModLoad(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, const void *pvCm, size_t cbCm)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALLOADCODEMODREQ Req;
+    Req.enmCmType = PSPSERIALCMTYPE_FLAT_BINARY;
+    Req.u32Pad0   = 0; /* idInBuf */
+    int rc = pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_LOAD_CODE_MOD,
+                                  PSPSERIALPDURRNID_RESPONSE_LOAD_CODE_MOD,
+                                  &Req, sizeof(Req), NULL /*pvResp*/, 0 /*cbResp*/, 10000);
+    if (!rc)
+    {
+        /* Load the code module in chunks so we don't exceed the maximum PDU size. */
+        PSPSERIALINBUFWRREQ InBufWrReq;
+        const uint8_t *pbCm = (const uint8_t *)pvCm;
+        size_t cbPduPayloadMax =   pThis->cbPduMax
+                                 - sizeof(InBufWrReq)
+                                 - sizeof(PSPSERIALPDUHDR)
+                                 - sizeof(PSPSERIALPDUFOOTER);
+
+        InBufWrReq.idInBuf = 0;
+        InBufWrReq.u32Pad0 = 0;
+
+        while (   cbCm
+               && !rc)
+        {
+            size_t cbThisSend = MIN(cbPduPayloadMax, cbCm);
+
+            rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_INPUT_BUF_WRITE,
+                                        PSPSERIALPDURRNID_RESPONSE_INPUT_BUF_WRITE,
+                                        &InBufWrReq, sizeof(InBufWrReq), pbCm, cbThisSend, 10000);
+
+            cbCm -= cbThisSend;
+            pbCm += cbThisSend;
+        }
+    }
+
+    return rc;
+}
+
+
+int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t u32Arg0, uint32_t u32Arg1,
+                                uint32_t u32Arg2, uint32_t u32Arg3, uint32_t *pu32CmRet, uint32_t cMillies)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALEXECCODEMODREQ Req;
+    Req.u32Arg0 = u32Arg0;
+    Req.u32Arg1 = u32Arg1;
+    Req.u32Arg2 = u32Arg2;
+    Req.u32Arg3 = u32Arg3;
+    int rc = pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_EXEC_CODE_MOD,
+                                  PSPSERIALPDURRNID_RESPONSE_EXEC_CODE_MOD,
+                                  &Req, sizeof(Req), NULL /*pvResp*/, 0 /*cbResp*/, 10000);
+    if (!rc)
+    {
+        /*
+         * Code is running now, excercise the runloop until we receive a code module execution finished notification,
+         * The runloop will handle all the I/O transfers.
+         */
+        PCPSPSERIALPDUHDR pPdu = NULL;
+        PCPSPSERIALEXECCMFINISHEDNOT pExecNot = NULL;
+        size_t cbExecNot = 0;
+        rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_CODE_MOD_EXEC_FINISHED, &pPdu,
+                                 (void **)&pExecNot, &cbExecNot, cMillies);
+        if (!rc)
+            *pu32CmRet = pExecNot->u32CmRet;
+    }
+
+    return rc;
 }
 

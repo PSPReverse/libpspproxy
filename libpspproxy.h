@@ -40,16 +40,60 @@ typedef PSPPROXYCTX *PPSPPROXYCTX;
 
 
 /**
- * Log message received callback.
- *
- * @returns nothing.
- * @param   hCtx                    The PSP proxy context handle.
- * @param   pszMsg                  The received message.
- * @param   pvUser                  Opaque user data passed during creation.
+ * I/O interface callback table.
  */
-typedef void (FNPSPPROXYLOGMSGRECV)(PSPPROXYCTX hCtx, const char *pszMsg, void *pvUser);
-/** Pointer to a log message received callback. */
-typedef FNPSPPROXYLOGMSGRECV *PFNPSPPROXYLOGMSGRECV;
+typedef struct PSPPROXYIOIF
+{
+    /**
+     * Log message received callback.
+     *
+     * @returns nothing.
+     * @param   hCtx                    The PSP proxy context handle.
+     * @param   pvUser                  Opaque user data passed during creation.
+     * @param   pszMsg                  The received message.
+     */
+    void (*pfnLogMsg) (PSPPROXYCTX hCtx, void *pvUser, const char *pszMsg);
+
+    /**
+     * Output buffer write callback.
+     *
+     * @returns Status code.
+     * @param   hCtx                    The PSP proxy context handle.
+     * @param   pvUser                  Opaque user data passed during creation.
+     * @param   idOutBuf                Output buffer ID written to.
+     * @param   pvBuf                   The data being written.
+     * @param   cbBuf                   Amount of bytes written.
+     */
+    int (*pfnOutBufWrite) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idOutBuf, const void *pvBuf, size_t cbBuf);
+
+    /**
+     * Peeks how much is available for reading from the given input buffer.
+     *
+     * @returns Number of bytes available for reading from the input buffer.
+     * @param   hCtx                    The PSP proxy context handle.
+     * @param   pvUser                  Opaque user data passed during creation.
+     * @param   idInBuf                 The input buffer ID.
+     */
+    size_t (*pfnInBufPeek) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idInBuf);
+
+    /**
+     * Reads data from the given input buffer.
+     *
+     * @returns Status code.
+     * @param   hCtx                    The PSP proxy context handle.
+     * @param   pvUser                  Opaque user data passed during creation.
+     * @param   idInBuf                 The input buffer ID.
+     * @param   pvBuf                   Where to store the read data.
+     * @param   cbRead                  Number of bytes to read.
+     * @param   pcbRead                 Where to store the number of bytes actually read, optional.
+     */
+    int (*pfnInBufRead) (PSPPROXYCTX hCtx, void *pvUser, uint32_t idInBuf, void *pvBuf, size_t cbRead, size_t *pcbRead);
+
+} PSPPROXYIOIF;
+/** Pointer to an I/O interface callback table. */
+typedef PSPPROXYIOIF *PPSPPROXYIOIF;
+/** Pointer a const I/O interface callback table. */
+typedef const PSPPROXYIOIF *PCPSPPROXYIOIF;
 
 
 /**
@@ -58,10 +102,10 @@ typedef FNPSPPROXYLOGMSGRECV *PFNPSPPROXYLOGMSGRECV;
  * @returns Status code.
  * @param   phCtx                   Where to store the handle to the PSP proxy context on success.
  * @param   pszDevice               The device to use, usually /dev/sev.
- * @param   pfnLogMsg               Callback handler for received log messages from the proxy.
+ * @param   pIoIf                   Pointer to the I/O interface callbacks.
  * @param   pvUser                  Opaque user data to pass to the callback.
  */
-int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PFNPSPPROXYLOGMSGRECV pfnLogMsg,
+int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PCPSPPROXYIOIF pIoIf,
                       void *pvUser);
 
 /**
@@ -342,5 +386,31 @@ int PSPProxyCtxScratchSpaceAlloc(PSPPROXYCTX hCtx, size_t cbAlloc, PSPADDR *pPsp
  * @param   cb                      Size of the scratch space area to free (must be same as used during allocation).
  */
 int PSPProxyCtxScratchSpaceFree(PSPPROXYCTX hCtx, PSPADDR PspAddr, size_t cb);
+
+/**
+ * Loads the given code module into the PSP.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   pvCm                    The code module binary data.
+ * @param   cbCm                    Size of the code module in bytes.
+ */
+int PSPProxyCtxCodeModLoad(PSPPROXYCTX hCtx, const void *pvCm, size_t cbCm);
+
+/**
+ * Executes the currently loaded code module using the provided arguments.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   u32Arg0                 Argument 0.
+ * @param   u32Arg1                 Argument 1.
+ * @param   u32Arg2                 Argument 2.
+ * @param   u32Arg3                 Argument 3.
+ * @param   pu32CmdRet              Where to store the return value of the code module when it returns.
+ * @param   cMillies                How long to wait for the code module to finish exeucting until a timeout
+ *                                  error is returned.
+ */
+int PSPProxyCtxCodeModExec(PSPPROXYCTX hCtx, uint32_t u32Arg0, uint32_t u32Arg1, uint32_t u32Arg2, uint32_t u32Arg3,
+                           uint32_t *pu32CmRet, uint32_t cMillies);
 
 #endif /* __libpspproxy_h */

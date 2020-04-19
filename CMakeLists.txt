@@ -30,6 +30,9 @@ target_include_directories(pspproxystatic PRIVATE .)
 target_include_directories(pspproxystatic PRIVATE include)
 target_include_directories(pspproxystatic PRIVATE psp-includes)
 
+add_executable (cm-tool cm-tool.c)
+target_link_libraries(cm-tool LINK_PUBLIC pspproxystatic)
+
 include(GNUInstallDirs)
 install(TARGETS pspproxy
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

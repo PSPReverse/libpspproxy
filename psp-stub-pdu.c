@@ -388,19 +388,19 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
         {
             if (pPdu->u.Fields.enmRrnId != enmRrnId)
             {
-                if (   pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_LOG_MSG
-                    && pThis->pProxyIoIf
-                    && pThis->pProxyIoIf->pfnLogMsg)
+                if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_LOG_MSG)
                 {
-                    pspStubPduCtxLogMsgHandle(pThis, pPdu);
+                    if (   pThis->pProxyIoIf
+                        && pThis->pProxyIoIf->pfnLogMsg)
+                        pspStubPduCtxLogMsgHandle(pThis, pPdu);
                     continue;
                 }
 
-                if (   pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_OUT_BUF
-                    && pThis->pProxyIoIf
-                    && pThis->pProxyIoIf->pfnOutBufWrite)
+                if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_OUT_BUF)
                 {
-                    pspStubPduCtxOutBufWriteHandle(pThis, pPdu);
+                    if (   pThis->pProxyIoIf
+                        && pThis->pProxyIoIf->pfnOutBufWrite)
+                        pspStubPduCtxOutBufWriteHandle(pThis, pPdu);
                     continue;
                 }
 

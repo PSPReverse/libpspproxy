@@ -669,11 +669,42 @@ int pspStubPduCtxPspSmnRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t idCc
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALSMNMEMXFERREQ Req;
-    Req.SmnAddrStart = uSmnAddr;
-    Req.cbXfer       = cbVal;
-    return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_READ,
-                                PSPSERIALPDURRNID_RESPONSE_PSP_SMN_READ,
-                                &Req, sizeof(Req), pvVal, cbVal, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbVal <= cbPduPayloadMax)
+    {
+        /* Fast path without splitting it up into multiple PDUs. */
+        Req.SmnAddrStart = uSmnAddr;
+        Req.cbXfer       = cbVal;
+        return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_READ,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_SMN_READ,
+                                    &Req, sizeof(Req), pvVal, cbVal, 10000);
+    }
+
+    /* Slow path. */
+    uint8_t *pbDst = (uint8_t *)pvVal;
+    int rc = 0;
+    while (   cbVal
+           && !rc)
+    {
+        size_t cbThisRead = MIN(cbVal, cbPduPayloadMax);
+
+        Req.SmnAddrStart = uSmnAddr;
+        Req.cbXfer       = cbThisRead;
+        rc = pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_READ,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_SMN_READ,
+                                    &Req, sizeof(Req), pbDst, cbThisRead, 10000);
+        if (!rc)
+        {
+            pbDst    += cbThisRead;
+            uSmnAddr += cbThisRead;
+            cbVal    -= cbThisRead;
+        }
+    }
+
+    return rc;
 }
 
 
@@ -682,11 +713,41 @@ int pspStubPduCtxPspSmnWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t idC
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALSMNMEMXFERREQ Req;
-    Req.SmnAddrStart = uSmnAddr;
-    Req.cbXfer       = cbVal;
-    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_WRITE,
-                                  PSPSERIALPDURRNID_RESPONSE_PSP_SMN_WRITE,
-                                  &Req, sizeof(Req), pvVal, cbVal, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbVal <= cbPduPayloadMax)
+    {
+        Req.SmnAddrStart = uSmnAddr;
+        Req.cbXfer       = cbVal;
+        return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_WRITE,
+                                      PSPSERIALPDURRNID_RESPONSE_PSP_SMN_WRITE,
+                                      &Req, sizeof(Req), pvVal, cbVal, 10000);
+    }
+
+    /* Slow path. */
+    const uint8_t *pbSrc = (const uint8_t *)pvVal;
+    int rc = 0;
+    while (   cbVal
+           && !rc)
+    {
+        size_t cbThisWrite = MIN(cbVal, cbPduPayloadMax);
+
+        Req.SmnAddrStart = uSmnAddr;
+        Req.cbXfer       = cbThisWrite;
+        rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_SMN_WRITE,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_SMN_WRITE,
+                                    &Req, sizeof(Req), pbSrc, cbThisWrite, 10000);
+        if (!rc)
+        {
+            pbSrc    += cbThisWrite;
+            uSmnAddr += cbThisWrite;
+            cbVal    -= cbThisWrite;
+        }
+    }
+
+    return rc;
 }
 
 

@@ -237,9 +237,6 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
 {
     PPSPPROXYCTXINT pThis = hCtx;
 
-    if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
-        return -1;
-
     return pspStubPduCtxPspSmnRead(pThis->hPduCtx, pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
 }
 
@@ -247,9 +244,6 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
 int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;
-
-    if (cbVal != 1 && cbVal != 2 && cbVal != 4 && cbVal != 8)
-        return -1;
 
     return pspStubPduCtxPspSmnWrite(pThis->hPduCtx, pThis->idCcd, idCcdTgt, uSmnAddr, cbVal, pvVal);
 }

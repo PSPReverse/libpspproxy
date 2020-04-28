@@ -756,11 +756,41 @@ int pspStubPduCtxPspMemRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPADDR uPspA
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALPSPMEMXFERREQ Req;
-    Req.PspAddrStart = uPspAddr;
-    Req.cbXfer       = cbRead;
-    return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_READ,
-                                PSPSERIALPDURRNID_RESPONSE_PSP_MEM_READ,
-                                &Req, sizeof(Req), pvBuf, cbRead, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbRead <= cbPduPayloadMax)
+    {
+        Req.PspAddrStart = uPspAddr;
+        Req.cbXfer       = cbRead;
+        return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_READ,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_MEM_READ,
+                                    &Req, sizeof(Req), pvBuf, cbRead, 10000);
+    }
+
+    /* Slow path. */
+    uint8_t *pbBuf = (uint8_t *)pvBuf;
+    int rc = 0;
+    while (   cbRead
+           && !rc)
+    {
+        size_t cbThisRead = MIN(cbRead, cbPduPayloadMax);
+
+        Req.PspAddrStart = uPspAddr;
+        Req.cbXfer       = cbThisRead;
+        rc = pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_READ,
+                                  PSPSERIALPDURRNID_RESPONSE_PSP_MEM_READ,
+                                  &Req, sizeof(Req), pbBuf, cbThisRead, 10000);
+        if (!rc)
+        {
+            pbBuf    += cbThisRead;
+            uPspAddr += cbThisRead;
+            cbRead   -= cbThisRead;
+        }
+    }
+
+    return rc;
 }
 
 
@@ -769,11 +799,41 @@ int pspStubPduCtxPspMemWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPADDR uPsp
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALPSPMEMXFERREQ Req;
-    Req.PspAddrStart = uPspAddr;
-    Req.cbXfer       = cbWrite;
-    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
-                                  PSPSERIALPDURRNID_RESPONSE_PSP_MEM_WRITE,
-                                  &Req, sizeof(Req), pvBuf, cbWrite, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbWrite <= cbPduPayloadMax)
+    {
+        Req.PspAddrStart = uPspAddr;
+        Req.cbXfer       = cbWrite;
+        return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
+                                      PSPSERIALPDURRNID_RESPONSE_PSP_MEM_WRITE,
+                                      &Req, sizeof(Req), pvBuf, cbWrite, 10000);
+    }
+
+    /* Slow path. */
+    const uint8_t *pbBuf = (const uint8_t *)pvBuf;
+    int rc = 0;
+    while (   cbWrite
+           && !rc)
+    {
+        size_t cbThisWrite = MIN(cbWrite, cbPduPayloadMax);
+
+        Req.PspAddrStart = uPspAddr;
+        Req.cbXfer       = cbThisWrite;
+        rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
+                                    PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
+                                    &Req, sizeof(Req), pbBuf, cbThisWrite, 10000);
+        if (!rc)
+        {
+            pbBuf    += cbThisWrite;
+            uPspAddr += cbThisWrite;
+            cbWrite  -= cbThisWrite;
+        }
+    }
+
+    return rc;
 }
 
 
@@ -808,12 +868,42 @@ int pspStubPduCtxPspX86MemRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR P
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALX86MEMXFERREQ Req;
-    Req.PhysX86Start = PhysX86Addr;
-    Req.cbXfer       = cbRead;
-    Req.u32Pad0      = 0;
-    return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_READ,
-                                PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_READ,
-                                &Req, sizeof(Req), pvBuf, cbRead, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbRead <= cbPduPayloadMax)
+    {
+        Req.PhysX86Start = PhysX86Addr;
+        Req.cbXfer       = cbRead;
+        Req.u32Pad0      = 0;
+        return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_READ,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_READ,
+                                    &Req, sizeof(Req), pvBuf, cbRead, 10000);
+    }
+
+    /* Slow path. */
+    uint8_t *pbBuf = (uint8_t *)pvBuf;
+    int rc = 0;
+    while (   cbRead
+           && !rc)
+    {
+        size_t cbThisRead = MIN(cbRead, cbPduPayloadMax);
+
+        Req.PhysX86Start = PhysX86Addr;
+        Req.cbXfer       = cbThisRead;
+        rc = pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_READ,
+                                  PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_READ,
+                                  &Req, sizeof(Req), pbBuf, cbThisRead, 10000);
+        if (!rc)
+        {
+            pbBuf       += cbThisRead;
+            PhysX86Addr += cbThisRead;
+            cbRead      -= cbThisRead;
+        }
+    }
+
+    return rc;
 }
 
 
@@ -822,12 +912,42 @@ int pspStubPduCtxPspX86MemWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR 
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
     PSPSERIALX86MEMXFERREQ Req;
-    Req.PhysX86Start = PhysX86Addr;
-    Req.cbXfer       = cbWrite;
-    Req.u32Pad0      = 0;
-    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_WRITE,
-                                  PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_WRITE,
-                                  &Req, sizeof(Req), pvBuf, cbWrite, 10000);
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+    if (cbWrite <= cbPduPayloadMax)
+    {
+        Req.PhysX86Start = PhysX86Addr;
+        Req.cbXfer       = cbWrite;
+        Req.u32Pad0      = 0;
+        return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_WRITE,
+                                      PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_WRITE,
+                                      &Req, sizeof(Req), pvBuf, cbWrite, 10000);
+    }
+
+    /* Slow path. */
+    const uint8_t *pbBuf = (const uint8_t *)pvBuf;
+    int rc = 0;
+    while (   cbWrite
+           && !rc)
+    {
+        size_t cbThisWrite = MIN(cbWrite, cbPduPayloadMax);
+
+        Req.PhysX86Start = PhysX86Addr;
+        Req.cbXfer       = cbThisWrite;
+        rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_X86_MEM_WRITE,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_X86_MEM_WRITE,
+                                    &Req, sizeof(Req), pbBuf, cbThisWrite, 10000);
+        if (!rc)
+        {
+            pbBuf       += cbThisWrite;
+            PhysX86Addr += cbThisWrite;
+            cbWrite     -= cbThisWrite;
+        }
+    }
+
+    return rc;
 }
 
 

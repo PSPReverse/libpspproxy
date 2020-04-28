@@ -156,12 +156,14 @@ static int pspStubPduCtxHdrValidate(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR p
 static int pspStubPduCtxValidate(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR pHdr)
 {
     uint32_t uChkSum = 0;
+    size_t cbPad = ((pHdr->u.Fields.cbPdu + 7) & ~(size_t)7) - pHdr->u.Fields.cbPdu;
 
     for (uint32_t i = 0; i < sizeof(pHdr->u.ab); i++)
         uChkSum += pHdr->u.ab[i];
 
+    /* Verify padding is all 0 by including it in the checksum. */
     uint8_t *pbPayload = (uint8_t *)(pHdr + 1);
-    for (uint32_t i = 0; i < pHdr->u.Fields.cbPdu; i++)
+    for (uint32_t i = 0; i < pHdr->u.Fields.cbPdu + cbPad; i++)
         uChkSum += *pbPayload++;
 
     /* Check whether the footer magic and checksum are valid. */
@@ -200,8 +202,9 @@ static int pspStubPduCtxRecvAdvance(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *
                 /* No payload means going directly to the footer. */
                 if (pHdr->u.Fields.cbPdu)
                 {
+                    size_t cbPad = ((pHdr->u.Fields.cbPdu + 7) & ~(size_t)7) - pHdr->u.Fields.cbPdu;
                     pThis->enmPduRecvState = PSPSERIALPDURECVSTATE_PAYLOAD;
-                    pThis->cbPduRecvLeft   = pHdr->u.Fields.cbPdu;
+                    pThis->cbPduRecvLeft   = pHdr->u.Fields.cbPdu + cbPad;
                 }
                 else
                 {
@@ -455,6 +458,8 @@ static int pspStubPduCtxSend(PPSPSTUBPDUCTXINT pThis, uint32_t idCcd, PSPSERIALP
 {
     PSPSERIALPDUHDR PduHdr;
     PSPSERIALPDUFOOTER PduFooter;
+    uint8_t abPad[7] = { 0 };
+    size_t cbPad = ((cbPayload + 7) & ~(size_t)7) - cbPayload; /* Pad the payload to an 8 byte alignment so the footer is properly aligned. */
 
     /* Initialize header and footer. */
     PduHdr.u32Magic           = PSP_SERIAL_EXT_2_PSP_PDU_START_MAGIC;
@@ -472,13 +477,17 @@ static int pspStubPduCtxSend(PPSPSTUBPDUCTXINT pThis, uint32_t idCcd, PSPSERIALP
     for (size_t i = 0; i < cbPayload; i++)
         uChkSum += pbPayload[i];
 
+    /* The padding needs no checksum during generation as it is always 0. */
+
     PduFooter.u32ChkSum = (0xffffffff - uChkSum) + 1;
     PduFooter.u32Magic  = PSP_SERIAL_EXT_2_PSP_PDU_END_MAGIC;
 
-    /* Send everything, header first, then payload and footer last. */
+    /* Send everything, header first, then payload and any padding and footer last. */
     int rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, &PduHdr, sizeof(PduHdr));
     if (!rc && pvPayload && cbPayload)
         rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, pvPayload, cbPayload);
+    if (!rc && cbPad)
+        rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, &abPad[0], cbPad);
     if (!rc)
         rc = pThis->pProvIf->pfnCtxWrite(pThis->hProvCtx, &PduFooter, sizeof(PduFooter));
 

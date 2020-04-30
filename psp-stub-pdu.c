@@ -1056,6 +1056,7 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
     {
         size_t cbThisXfer = MIN(cbXfer, cbPduPayloadMax);
 
+        Req.cbXfer = cbThisXfer;
         rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_DATA_XFER,
                                     PSPSERIALPDURRNID_RESPONSE_PSP_DATA_XFER,
                                     &Req, sizeof(Req), pbLocal, cbThisXfer, 10000);
@@ -1086,6 +1087,8 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
                         return -1;
                 }
             }
+
+            cbXfer -= cbThisXfer;
         }
     }
 

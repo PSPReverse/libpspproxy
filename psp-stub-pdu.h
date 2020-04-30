@@ -219,6 +219,22 @@ int pspStubPduCtxPspX86MmioWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR
 
 
 /**
+ * Generic data transfer method, more capable than the other methods but also more cmoplicated to use.
+ *
+ * @returns Status code.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   idCcd                   The CCD ID for the transfer.
+ * @param   pPspAddr                The PSP address information for this transfer.
+ * @param   fFlags                  Flags for this transfer, see PSPPROXY_CTX_ADDR_XFER_F_XXX.
+ * @param   cbStride                Stride for an individual access (1, 2 or 4 bytes).
+ * @param   cbXfer                  Overall number of bytes to transfer, must be multiple of stride.
+ * @param   pvLocal                 The local data buffer to write to/read from.
+ */
+int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYADDR pPspAddr, uint32_t fFlags, size_t cbStride,
+                             size_t cbXfer, void *pvLocal);
+
+
+/**
  * Loads a code module on the given PSP.
  *
  * @returns Status code.

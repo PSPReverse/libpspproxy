@@ -40,6 +40,58 @@ typedef PSPPROXYCTX *PPSPPROXYCTX;
 
 
 /**
+ * PSP proxy address space type.
+ */
+typedef enum PSPPROXYADDRSPACE
+{
+    /** Invalid address space. */
+    PSPPROXYADDRSPACE_INVALID = 0,
+    /** PSP SRAM. */
+    PSPPROXYADDRSPACE_PSP_MEM,
+    /** PSP MMIO. */
+    PSPPROXYADDRSPACE_PSP_MMIO,
+    /** SMN. */
+    PSPPROXYADDRSPACE_SMN,
+    /** x86 standard memory. */
+    PSPPROXYADDRSPACE_X86_MEM,
+    /** x86 MMIO. */
+    PSPPROXYADDRSPACE_X86_MMIO,
+    /** 32bit hack. */
+    PSPPROXYADDRSPACE_32BIT_HACK = 0x7fffffff
+} PSPPROXYADDRSPACE;
+
+
+/**
+ * PSP proxy address.
+ */
+typedef struct PSPPROXYADDR
+{
+    /** The address space type. */
+    PSPPROXYADDRSPACE           enmAddrSpace;
+    /** Type dependent data. */
+    union
+    {
+        /** PSP address. */
+        PSPADDR                 PspAddr;
+        /** SMN address. */
+        SMNADDR                 SmnAddr;
+        /** x86 address dependent data. */
+        struct
+        {
+            /** Physical x86 address. */
+            X86PADDR            PhysX86Addr;
+            /** Caching information associated with that address. */
+            uint32_t            fCaching;
+        } X86;
+    } u;
+} PSPPROXYADDR;
+/** Pointer to a PSP proxy address. */
+typedef PSPPROXYADDR *PPSPPROXYADDR;
+/** Pointer to a const PSP proxy address. */
+typedef const PSPPROXYADDR *PCPSPPROXYADDR;
+
+
+/**
  * I/O interface callback table.
  */
 typedef struct PSPPROXYIOIF
@@ -94,6 +146,20 @@ typedef struct PSPPROXYIOIF
 typedef PSPPROXYIOIF *PPSPPROXYIOIF;
 /** Pointer a const I/O interface callback table. */
 typedef const PSPPROXYIOIF *PCPSPPROXYIOIF;
+
+
+/** Request is a read. */
+#define PSPPROXY_CTX_ADDR_XFER_F_READ          (1 << 0)
+/** Request is a write. */
+#define PSPPROXY_CTX_ADDR_XFER_F_WRITE         (1 << 1)
+/** Request is a memset() like operation containing only a single value. */
+#define PSPPROXY_CTX_ADDR_XFER_F_MEMSET        (1 << 2)
+/** Increment the PSP address after each access by the given stride,
+ * if not given the transfer will write to/read from the same address for each request
+ * (for optimized accesses to data ports). */
+#define PSPPROXY_CTX_ADDR_XFER_F_INCR_ADDR     (1 << 3)
+/** Mask ov valid operation bits. */
+#define PSPPROXY_CTX_ADDR_XFER_F_OP_MASK_VALID (0x7)
 
 
 /**
@@ -152,6 +218,8 @@ int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr,
  * @param   pvVal                   The value to write.
  */
 int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);
+
+
 
 /**
  * Reads from the PSP address space at the given address.
@@ -244,6 +312,19 @@ int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t c
  * @param   pvVal                   The value to write.
  */
 int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
+
+/**
+ * Generic data transfer method, more capable than the other methods but also more cmoplicated to use.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   pPspAddr                The PSP address information for this transfer.
+ * @param   fFlags                  Flags for this transfer, see PSPPROXY_CTX_ADDR_XFER_F_XXX.
+ * @param   cbStride                Stride for an individual access (1, 2 or 4 bytes).
+ * @param   cbXfer                  Overall number of bytes to transfer, must be multiple of stride.
+ * @param   pvLocal                 The local data buffer to write to/read from.
+ */
+int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t fFlags, size_t cbStride, size_t cbXfer, void *pvLocal);
 
 /**
  * Execute a syscall on the PSP.

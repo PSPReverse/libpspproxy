@@ -327,6 +327,26 @@ int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0,
 }
 
 
+int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t fFlags, size_t cbStride, size_t cbXfer, void *pvLocal)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    if (   cbStride != 1
+        && cbStride != 2
+        && cbStride != 4)
+        return -1;
+    if (cbXfer % cbStride != 0)
+        return -1;
+    uint32_t fOp = fFlags & PSPPROXY_CTX_ADDR_XFER_F_OP_MASK_VALID; /* Only set flag is allowed. */
+    if (   (fOp & PSPPROXY_CTX_ADDR_XFER_F_READ) != PSPPROXY_CTX_ADDR_XFER_F_READ
+        && (fOp & PSPPROXY_CTX_ADDR_XFER_F_WRITE) != PSPPROXY_CTX_ADDR_XFER_F_WRITE
+        && (fOp & PSPPROXY_CTX_ADDR_XFER_F_MEMSET) != PSPPROXY_CTX_ADDR_XFER_F_MEMSET)
+        return -1;
+
+    return pspStubPduCtxPspAddrXfer(pThis->hPduCtx, pThis->idCcd, pPspAddr, fFlags, cbStride, cbXfer, pvLocal);
+}
+
+
 int PSPProxyCtxX86SmnRead(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;

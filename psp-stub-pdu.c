@@ -988,6 +988,111 @@ int pspStubPduCtxPspX86MmioWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, X86PADDR
 }
 
 
+int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYADDR pPspAddr, uint32_t fFlags, size_t cbStride,
+                             size_t cbXfer, void *pvLocal)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALDATAXFERREQ Req;
+    size_t cbPduPayloadMax =   pThis->cbPduMax
+                             - sizeof(Req)
+                             - sizeof(PSPSERIALPDUHDR)
+                             - sizeof(PSPSERIALPDUFOOTER);
+
+    switch (pPspAddr->enmAddrSpace)
+    {
+        case PSPPROXYADDRSPACE_PSP_MEM:
+            Req.enmAddrSpace   = PSPADDRSPACE_PSP_MEM;
+            Req.u.PspAddrStart = pPspAddr->u.PspAddr;
+            break;
+        case PSPPROXYADDRSPACE_PSP_MMIO:
+            Req.enmAddrSpace   = PSPADDRSPACE_PSP_MMIO;
+            Req.u.PspAddrStart = pPspAddr->u.PspAddr;
+            break;
+        case PSPPROXYADDRSPACE_SMN:
+            Req.enmAddrSpace   = PSPADDRSPACE_SMN;
+            Req.u.SmnAddrStart = pPspAddr->u.SmnAddr;
+            break;
+        case PSPPROXYADDRSPACE_X86_MEM:
+            Req.enmAddrSpace           = PSPADDRSPACE_X86_MEM;
+            Req.u.X86.PhysX86AddrStart = pPspAddr->u.X86.PhysX86Addr;
+            Req.u.X86.fCaching         = pPspAddr->u.X86.fCaching;
+            break;
+        case PSPPROXYADDRSPACE_X86_MMIO:
+            Req.enmAddrSpace           = PSPADDRSPACE_X86_MMIO;
+            Req.u.X86.PhysX86AddrStart = pPspAddr->u.X86.PhysX86Addr;
+            Req.u.X86.fCaching         = pPspAddr->u.X86.fCaching;
+            break;
+        default:
+            return -1;
+    }
+
+    Req.cbStride = (uint32_t)cbStride;
+    Req.cbXfer   = (uint32_t)cbXfer;
+    Req.fFlags   = 0;
+
+    size_t cbData = cbXfer;
+    if (fFlags & PSPPROXY_CTX_ADDR_XFER_F_READ)
+        Req.fFlags |= PSP_SERIAL_DATA_XFER_F_READ;
+    if (fFlags & PSPPROXY_CTX_ADDR_XFER_F_WRITE)
+        Req.fFlags |= PSP_SERIAL_DATA_XFER_F_WRITE;
+    if (fFlags & PSPPROXY_CTX_ADDR_XFER_F_MEMSET)
+    {
+        Req.fFlags |= PSP_SERIAL_DATA_XFER_F_MEMSET;
+        cbData = cbStride;
+    }
+    if (fFlags & PSPPROXY_CTX_ADDR_XFER_F_INCR_ADDR)
+        Req.fFlags |= PSP_SERIAL_DATA_XFER_F_INCR_ADDR;
+
+    if (cbData <= cbPduPayloadMax)
+        return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_DATA_XFER,
+                                      PSPSERIALPDURRNID_RESPONSE_PSP_DATA_XFER,
+                                      &Req, sizeof(Req), pvLocal, cbData, 10000);
+
+    const uint8_t *pbLocal = (const uint8_t *)pvLocal;
+    int rc = 0;
+    while (   cbXfer
+           && !rc)
+    {
+        size_t cbThisXfer = MIN(cbXfer, cbPduPayloadMax);
+
+        rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_DATA_XFER,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_DATA_XFER,
+                                    &Req, sizeof(Req), pbLocal, cbThisXfer, 10000);
+        if (!rc)
+        {
+            if (!(fFlags & PSPPROXY_CTX_ADDR_XFER_F_MEMSET))
+            {
+                pbLocal  += cbThisXfer;
+                cbData   -= cbThisXfer;
+            }
+
+            if (fFlags & PSP_SERIAL_DATA_XFER_F_INCR_ADDR)
+            {
+                switch (pPspAddr->enmAddrSpace)
+                {
+                    case PSPPROXYADDRSPACE_PSP_MMIO:
+                    case PSPPROXYADDRSPACE_PSP_MEM:
+                        Req.u.PspAddrStart += cbThisXfer;
+                        break;
+                    case PSPPROXYADDRSPACE_SMN:
+                        Req.u.SmnAddrStart += cbThisXfer;
+                        break;
+                    case PSPPROXYADDRSPACE_X86_MMIO:
+                    case PSPPROXYADDRSPACE_X86_MEM:
+                        Req.u.X86.PhysX86AddrStart += cbThisXfer;
+                        break;
+                    default: /* Paranoia */
+                        return -1;
+                }
+            }
+        }
+    }
+
+    return rc;
+}
+
+
 int pspStubPduCtxPspCodeModLoad(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, const void *pvCm, size_t cbCm)
 {
     PPSPSTUBPDUCTXINT pThis = hPduCtx;

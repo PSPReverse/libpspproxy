@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 
 #include <poll.h>
@@ -79,9 +80,17 @@ static int tcpProvCtxInit(PSPPROXYPROVCTX hProvCtx, const char *pszDevice)
                 pThis->iFdCon = socket(AF_INET, SOCK_STREAM, 0);
                 if (pThis->iFdCon > -1)
                 {
-                    int rcPsx = connect(pThis->iFdCon,(struct sockaddr *)&SrvAddr,sizeof(SrvAddr));
+                    /* Disable nagle. */
+                    int fNoDelay = 1;
+                    int rcPsx = setsockopt(pThis->iFdCon, IPPROTO_TCP, TCP_NODELAY, &fNoDelay, sizeof(int));
                     if (!rcPsx)
-                        return 0;
+                    {
+                        int rcPsx = connect(pThis->iFdCon,(struct sockaddr *)&SrvAddr,sizeof(SrvAddr));
+                        if (!rcPsx)
+                            return 0;
+                        else
+                            rc = -1;
+                    }
                     else
                         rc = -1;
 

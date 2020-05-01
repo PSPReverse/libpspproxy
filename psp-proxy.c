@@ -347,6 +347,14 @@ int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t f
 }
 
 
+int PSPProxyCtxPspWaitForIrq(PSPPROXYCTX hCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxPspWaitForIrq(pThis->hPduCtx, pidCcd, pfIrq, pfFirq, cWaitMs);
+}
+
+
 int PSPProxyCtxX86SmnRead(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {
     PPSPPROXYCTXINT pThis = hCtx;

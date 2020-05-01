@@ -31,6 +31,8 @@
 
 /** Returns the minimum of two numbers. */
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+/** Maximum number of CCDs supported at the moment. */
+#define PSP_CCDS_MAX 16
 
 
 /**
@@ -98,6 +100,12 @@ typedef struct PSPSTUBPDUCTXINT
     char                        achLogMsg[1024];
     /** Number of bytes valid in the log message buffer. */
     size_t                      cchLogMsgAvail;
+    /** Number of CCDs which have at least one of the IRQ/FIRQ flags set. */
+    uint32_t                    cCcdsIrqPending;
+    /** Array of per CCD IRQ flags. */
+    bool                        afPerCcdIrq[PSP_CCDS_MAX];
+    /** Array of per CCD FIRQ flags. */
+    bool                        afPerCcdFirq[PSP_CCDS_MAX];
 } PSPSTUBPDUCTXINT;
 /** Pointer to an internal PSP proxy context. */
 typedef PSPSTUBPDUCTXINT *PPSPSTUBPDUCTXINT;
@@ -398,23 +406,41 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
                         pspStubPduCtxLogMsgHandle(pThis, pPdu);
                     continue;
                 }
-
-                if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_OUT_BUF)
+                else if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_OUT_BUF)
                 {
                     if (   pThis->pProxyIoIf
                         && pThis->pProxyIoIf->pfnOutBufWrite)
                         pspStubPduCtxOutBufWriteHandle(pThis, pPdu);
                     continue;
                 }
-
-                /*
-                 * Beacons are only ignored if not in connected mode or when
-                 * the counter matches what we've seen so far.
-                 *
-                 * A reset counter means that the target reset.
-                 */
-                if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_BEACON)
+                else if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_IRQ)
                 {
+                    uint32_t idCcd = pPdu->u.Fields.idCcd;
+                    /** @todo FIRQ handling. */
+                    if (idCcd < PSP_CCDS_MAX)
+                    {
+                        if (!pThis->afPerCcdIrq[idCcd])
+                        {
+                            pThis->afPerCcdIrq[idCcd] = true;
+                            pThis->cCcdsIrqPending++;
+                        }
+                    }
+                    else
+                    {
+                        rc = -1;
+                        break;
+                    }
+                    continue;
+                }
+                else if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_BEACON)
+                {
+                    /*
+                     * Beacons are only ignored if not in connected mode or when
+                     * the counter matches what we've seen so far.
+                     *
+                     * A reset counter means that the target reset.
+                     */
+
                     PCPSPSERIALBEACONNOT pBeacon = (PCPSPSERIALBEACONNOT)(pPdu + 1);
                     if (   !pThis->fConnect
                         || pBeacon->cBeaconsSent == pThis->cBeaconsSeen + 1)
@@ -1090,6 +1116,46 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
 
             cbXfer -= cbThisXfer;
         }
+    }
+
+    return rc;
+}
+
+
+int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    /* Check for a pending IRQ we received earlier. */
+    if (pThis->cCcdsIrqPending)
+    {
+        for (uint32_t i = 0; i < PSP_CCDS_MAX; i++)
+        {
+            if (    pThis->afPerCcdIrq[i]
+                || pThis->afPerCcdFirq[i])
+            {
+                *pidCcd = i;
+                *pfIrq = pThis->afPerCcdIrq[i];
+                *pfFirq = pThis->afPerCcdFirq[i];
+
+                /* Reset */
+                pThis->afPerCcdIrq[i] = false;
+                pThis->afPerCcdFirq[i] = false;
+                pThis->cCcdsIrqPending--;
+                return 0;
+            }
+        }
+    }
+
+    /* Nothing received, so wait for one. */
+    PCPSPSERIALPDUHDR pPdu = NULL;
+    int rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_IRQ, &pPdu,
+                                 NULL /*ppvPayload*/, 0 /*pcbPayload*/, cWaitMs);
+    if (!rc)
+    {
+        *pidCcd = pPdu->u.Fields.idCcd;
+        *pfIrq  = true;
+        *pfFirq = false;
     }
 
     return rc;

@@ -22,16 +22,8 @@
 #ifndef __libpspproxy_h
 #define __libpspproxy_h
 
-#include <stdint.h>
-
-/** A SMN (System Management Network) address. */
-typedef uint32_t SMNADDR;
-/** A virtual PSP memory address. */
-typedef uint32_t PSPADDR;
-/** A x86 physical address. */
-typedef uint64_t X86PADDR;
-/** R0 pointer. */
-typedef uint64_t R0PTR;
+#include <common/cdefs.h>
+#include <common/types.h>
 
 /** Opaque PSP proxy context handle. */
 typedef struct PSPPROXYCTXINT *PSPPROXYCTX;
@@ -337,6 +329,18 @@ int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t f
  * @param   pu32R0Return            Where to store the R0 return value of the syscall.
  */
 int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return);
+
+/**
+ * Wait for interrupt to happen on one of the PSPs.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   pidCcd                  Where to store the CCD ID where the interrupt occured on success.
+ * @param   pfIrq                   Where to return whether an IRQ is pending on success.
+ * @param   pfFirq                  Where to return whether an FIRQ is pending on success.
+ * @param   cWaitMs                 Number if milliseconds to wait before returning a timeout.
+ */
+int PSPProxyCtxPspWaitForIrq(PSPPROXYCTX hCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs);
 
 /**
  * Reads the register at the given SMN address, the access is initiated from the x86 core and not the PSP.

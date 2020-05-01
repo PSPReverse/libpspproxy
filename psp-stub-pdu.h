@@ -235,6 +235,19 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
 
 
 /**
+ * Wait for interrupt to happen on one of the PSPs.
+ *
+ * @returns Status code.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   pidCcd                  Where to store the CCD ID where the interrupt occured on success.
+ * @param   pfIrq                   Where to return whether an IRQ is pending on success.
+ * @param   pfFirq                  Where to return whether an FIRQ is pending on success.
+ * @param   cWaitMs                 Number if milliseconds to wait before returning a timeout.
+ */
+int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs);
+
+
+/**
  * Loads a code module on the given PSP.
  *
  * @returns Status code.

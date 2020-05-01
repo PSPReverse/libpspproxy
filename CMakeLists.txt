@@ -24,23 +24,21 @@ add_library(pspproxystatic STATIC
     psp-stub-pdu.c
 )
 set_target_properties(pspproxystatic PROPERTIES OUTPUT_NAME pspproxy)
-set_target_properties(pspproxystatic PROPERTIES PUBLIC_HEADER libpspproxy.h)
 set_target_properties(pspproxystatic PROPERTIES POSITION_INDEPENDENT_CODE True)
 target_include_directories(pspproxystatic PRIVATE .)
 target_include_directories(pspproxystatic PRIVATE include)
 target_include_directories(pspproxystatic PRIVATE psp-includes)
 
 add_executable (cm-tool cm-tool.c)
+target_include_directories(cm-tool PRIVATE psp-includes)
 target_link_libraries(cm-tool LINK_PUBLIC pspproxystatic)
 
 include(GNUInstallDirs)
 install(TARGETS pspproxy
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-install(TARGETS pspproxystatic
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libpspproxy)
+install(DIRECTORY psp-includes/common
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libpspproxy)
 
 configure_file(libpspproxy.pc.in libpspproxy.pc @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/libpspproxy.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)

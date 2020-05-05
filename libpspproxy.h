@@ -317,6 +317,36 @@ int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t 
 int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t fFlags, size_t cbStride, size_t cbXfer, void *pvLocal);
 
 /**
+ * Writes to the given co processor register.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   idCoProc                Co-Processor identifier to access.
+ * @param   idCrn                   The CRn value.
+ * @param   idCrm                   The CRm value.
+ * @param   idOpc1                  The opc1 value.
+ * @param   idOpc2                  The opc2 value.
+ * @param   u32Val                  The value to write.
+ */
+int PSPProxyCtxPspCoProcWrite(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2,
+                              uint32_t u32Val);
+
+/**
+ * Reads from the given co processor register.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   idCoProc                Co-Processor identifier to access.
+ * @param   idCrn                   The CRn value.
+ * @param   idCrm                   The CRm value.
+ * @param   idOpc1                  The opc1 value.
+ * @param   idOpc2                  The opc2 value.
+ * @param   pu32Val                 Where to store the value read on success.
+ */
+int PSPProxyCtxPspCoProcRead(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2,
+                             uint32_t *pu32Val);
+
+/**
  * Execute a syscall on the PSP.
  *
  * @returns Status code.

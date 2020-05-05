@@ -169,6 +169,22 @@ class PSPProxy(object):
         else:
             return self.rcLibLast;
 
+    def readCoProc(self, idCoProc, idCrn, idCrm, idOpc1, idOpc2):
+        pVal = ffi.new("uint32_t *");
+
+        self.rcLibLast = lib.PSPProxyCtxPspCoProcRead(self.hCtx, idCoProc, idCrn, idCrm, idOpc1, idOpc2, pVal);
+        if self.rcLibLast == 0:
+            return (0, pVal[0]);
+        else:
+            return (self.rcLibLast, 0);
+
+    def writeCoProc(self, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal):
+        self.rcLibLast = lib.PSPProxyCtxPspCoProcRead(self.hCtx, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal);
+        if self.rcLibLast == 0:
+            return 0;
+        else:
+            return self.rcLibLast;
+
     def callSvc(self, idxSyscall, uR0, uR1, uR2, uR3):
         pR0Return = ffi.new("uint32_t *");
         self.rcLibLast = lib.PSPProxyCtxPspSvcCall(self.hCtx, idxSyscall, uR0, uR1, uR2, uR3, pR0Return);

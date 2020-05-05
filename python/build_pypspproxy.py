@@ -8,6 +8,7 @@ ffibuilder = FFI()
 cpp_path = Path("..").resolve()
 libpspproxy_lib_path = cpp_path.joinpath("libpspproxy.a")
 libpspproxy_include_path = cpp_path.joinpath(".")
+libpspproxy_include_path2 = cpp_path.joinpath("../psp-includes")
 
 ffibuilder.set_source(
     "_pypspproxy",
@@ -15,7 +16,7 @@ ffibuilder.set_source(
     #include "libpspproxy.h"
     """,
     extra_objects=[str(libpspproxy_lib_path)],
-    include_dirs=[str(libpspproxy_include_path)],
+    include_dirs=[str(libpspproxy_include_path), str(libpspproxy_include_path2)],
 )
 
 ffibuilder.cdef("""
@@ -50,6 +51,8 @@ int PSPProxyCtxPspX86MemRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, void *pvBuf
 int PSPProxyCtxPspX86MemWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, const void *pvBuf, uint32_t cbWrite);
 int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, void *pvVal);
 int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
+int PSPProxyCtxPspCoProcWrite(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2, uint32_t u32Val);
+int PSPProxyCtxPspCoProcRead(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2, uint32_t *pu32Val);
 int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return);
 int PSPProxyCtxX86SmnRead(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
 int PSPProxyCtxX86SmnWrite(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);

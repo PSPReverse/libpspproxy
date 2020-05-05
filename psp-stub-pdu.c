@@ -1122,6 +1122,46 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
 }
 
 
+int pspStubPduCtxPspCoProcWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, 
+                                uint8_t idOpc1, uint8_t idOpc2, uint32_t u32Val)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALCOPROCRWREQ Req;
+    Req.u8CoProc = idCoProc;
+    Req.u8Crn    = idCrn;
+    Req.u8Crm    = idCrm;
+    Req.u8Opc1   = idOpc1;
+    Req.u8Opc2   = idOpc2;
+    Req.abPad[0] = 0;
+    Req.abPad[1] = 0;
+    Req.abPad[2] = 0;
+    return pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_COPROC_WRITE,
+                                  PSPSERIALPDURRNID_RESPONSE_COPROC_WRITE,
+                                  &Req, sizeof(Req), &u32Val, sizeof(u32Val), 10000);
+}
+
+
+int pspStubPduCtxPspCoProcRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm,
+                               uint8_t idOpc1, uint8_t idOpc2, uint32_t *pu32Val)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALCOPROCRWREQ Req;
+    Req.u8CoProc = idCoProc;
+    Req.u8Crn    = idCrn;
+    Req.u8Crm    = idCrm;
+    Req.u8Opc1   = idOpc1;
+    Req.u8Opc2   = idOpc2;
+    Req.abPad[0] = 0;
+    Req.abPad[1] = 0;
+    Req.abPad[2] = 0;
+    return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_COPROC_READ,
+                                PSPSERIALPDURRNID_RESPONSE_COPROC_READ,
+                                &Req, sizeof(Req), pu32Val, sizeof(*pu32Val), 10000);
+}
+
+
 int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs)
 {
     PPSPSTUBPDUCTXINT pThis = hPduCtx;

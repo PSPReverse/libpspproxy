@@ -347,6 +347,24 @@ int PSPProxyCtxPspAddrXfer(PSPPROXYCTX hCtx, PCPSPPROXYADDR pPspAddr, uint32_t f
 }
 
 
+int PSPProxyCtxPspCoProcWrite(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2,
+                              uint32_t u32Val)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxPspCoProcWrite(pThis->hPduCtx, pThis->idCcd, idCoProc, idCrn, idCrm, idOpc1, idOpc2, u32Val);
+}
+
+
+int PSPProxyCtxPspCoProcRead(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2,
+                             uint32_t *pu32Val)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxPspCoProcRead(pThis->hPduCtx, pThis->idCcd, idCoProc, idCrn, idCrm, idOpc1, idOpc2, pu32Val);
+}
+
+
 int PSPProxyCtxPspWaitForIrq(PSPPROXYCTX hCtx, uint32_t *pidCcd, bool *pfIrq, bool *pfFirq, uint32_t cWaitMs)
 {
     PPSPPROXYCTXINT pThis = hCtx;

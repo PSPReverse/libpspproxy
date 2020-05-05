@@ -235,6 +235,40 @@ int pspStubPduCtxPspAddrXfer(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PCPSPPROXYAD
 
 
 /**
+ * Writes to the given co processor register.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   idCcd                   The CCD ID for the transfer.
+ * @param   idCoProc                Co-Processor identifier to access.
+ * @param   idCrn                   The CRn value.
+ * @param   idCrm                   The CRm value.
+ * @param   idOpc1                  The opc1 value.
+ * @param   idOpc2                  The opc2 value.
+ * @param   u32Val                  The value to write.
+ */
+int pspStubPduCtxPspCoProcWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm,
+                                uint8_t idOpc1, uint8_t idOpc2, uint32_t u32Val);
+
+
+/**
+ * Reads from the given co processor register.
+ *
+ * @returns Status code.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   idCcd                   The CCD ID for the transfer.
+ * @param   idCoProc                Co-Processor identifier to access.
+ * @param   idCrn                   The CRn value.
+ * @param   idCrm                   The CRm value.
+ * @param   idOpc1                  The opc1 value.
+ * @param   idOpc2                  The opc2 value.
+ * @param   pu32Val                 Where to store the value read on success.
+ */
+int pspStubPduCtxPspCoProcRead(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm,
+                               uint8_t idOpc1, uint8_t idOpc2, uint32_t *pu32Val);
+
+
+/**
  * Wait for interrupt to happen on one of the PSPs.
  *
  * @returns Status code.

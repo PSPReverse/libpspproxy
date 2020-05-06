@@ -195,7 +195,7 @@ static int tcpProvCtxPoll(PSPPROXYPROVCTX hProvCtx, uint32_t cMillies)
     int rc = 0;
     int rcPsx = poll(&PollFd, 1, cMillies);
     if (rcPsx == 0)
-        rc = -2;
+        rc = STS_ERR_PSP_PROXY_TIMEOUT;
     else if (rcPsx == -1)
         rc = -1; /** @todo Better status codes for the individual errors. */
 

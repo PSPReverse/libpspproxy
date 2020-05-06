@@ -274,7 +274,7 @@ static int pspStubPduCtxRecv(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *ppPduRc
     do
     {
         rc = pThis->pProvIf->pfnCtxPoll(pThis->hProvCtx, cMillies);
-        if (rc == -2)
+        if (rc == STS_ERR_PSP_PROXY_TIMEOUT)
             break;
         if (!rc)
         {

@@ -24,6 +24,7 @@
 
 #include <common/cdefs.h>
 #include <common/types.h>
+#include <common/status.h>
 
 /** Opaque PSP proxy context handle. */
 typedef struct PSPPROXYCTXINT *PSPPROXYCTX;
@@ -141,15 +142,15 @@ typedef const PSPPROXYIOIF *PCPSPPROXYIOIF;
 
 
 /** Request is a read. */
-#define PSPPROXY_CTX_ADDR_XFER_F_READ          (1 << 0)
+#define PSPPROXY_CTX_ADDR_XFER_F_READ          BIT(0)
 /** Request is a write. */
-#define PSPPROXY_CTX_ADDR_XFER_F_WRITE         (1 << 1)
+#define PSPPROXY_CTX_ADDR_XFER_F_WRITE         BIT(1)
 /** Request is a memset() like operation containing only a single value. */
-#define PSPPROXY_CTX_ADDR_XFER_F_MEMSET        (1 << 2)
+#define PSPPROXY_CTX_ADDR_XFER_F_MEMSET        BIT(2)
 /** Increment the PSP address after each access by the given stride,
  * if not given the transfer will write to/read from the same address for each request
  * (for optimized accesses to data ports). */
-#define PSPPROXY_CTX_ADDR_XFER_F_INCR_ADDR     (1 << 3)
+#define PSPPROXY_CTX_ADDR_XFER_F_INCR_ADDR     BIT(3)
 /** Mask ov valid operation bits. */
 #define PSPPROXY_CTX_ADDR_XFER_F_OP_MASK_VALID (0x7)
 

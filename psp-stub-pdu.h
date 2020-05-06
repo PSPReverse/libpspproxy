@@ -85,6 +85,16 @@ int pspStubPduCtxQueryInfo(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPADDR *pPspA
 
 
 /**
+ * Query the returned status code of the last request.
+ *
+ * @returns Status code of this call.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   pReqRcLast              Where to store the status code of the last issued request.
+ */
+int pspStubPduCtxQueryLastReqRc(PSPSTUBPDUCTX hPduCtx, PSPSTS *pReqRcLast);
+
+
+/**
  * Reads the register at the given SMN address.
  *
  * @returns Status code.

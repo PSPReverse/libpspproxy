@@ -20,6 +20,7 @@ ffibuilder.set_source(
 )
 
 ffibuilder.cdef("""
+typedef int32_t  PSPSTS;
 typedef uint32_t SMNADDR;
 typedef uint32_t PSPADDR;
 typedef uint64_t X86PADDR;
@@ -41,6 +42,7 @@ typedef const PSPPROXYIOIF *PCPSPPROXYIOIF;
 int PSPProxyCtxCreate(PPSPPROXYCTX phCtx, const char *pszDevice, PCPSPPROXYIOIF pIoIf, void *pvUser);
 void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
 int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
+int PSPProxyCtxQueryLastReqRc(PSPPROXYCTX hCtx, PSPSTS *pReqRcLast);
 int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
 int PSPProxyCtxPspSmnWrite(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);
 int PSPProxyCtxPspMemRead(PSPPROXYCTX hCtx, PSPADDR uPspAddr, void *pvBuf, uint32_t cbRead);

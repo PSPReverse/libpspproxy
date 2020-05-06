@@ -232,6 +232,12 @@ int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd)
     return 0;
 }
 
+int PSPProxyCtxQueryLastReqRc(PSPPROXYCTX hCtx, PSPSTS *pReqRcLast)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxQueryLastReqRc(pThis->hPduCtx, pReqRcLast);
+}
 
 int PSPProxyCtxPspSmnRead(PSPPROXYCTX hCtx, uint32_t idCcdTgt, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal)
 {

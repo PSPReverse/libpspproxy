@@ -24,6 +24,13 @@ class PSPProxy(object):
         self.rcLibLast = lib.PSPProxyCtxPspCcdSet(self.hCtx, idCcd);
         return self.rcLibLast;
 
+    def queryLastReqRc(self):
+        pVal = ffi.new("PSPSTS *");
+        self.rcLibLast = lib.PSPProxyCtxQueryLastReqRc(self.hCtx, pVal);
+        if self.rcLibLast == 0:
+            return pVal[0];
+        return self.rcLibLast;
+
     def readSmn(self, idCcdTgt, uSmnAddr, cbVal):
         pVal = None;
         if cbVal == 1:

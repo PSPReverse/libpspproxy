@@ -24,13 +24,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <common/status.h>
+#include <common/cdefs.h>
 #include <psp-stub/psp-serial-stub.h>
 
 #include "psp-stub-pdu.h"
 
 
-/** Returns the minimum of two numbers. */
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 /** Maximum number of CCDs supported at the moment. */
 #define PSP_CCDS_MAX 16
 
@@ -86,6 +86,8 @@ typedef struct PSPSTUBPDUCTXINT
     bool                        fConnect;
     /** Maximum PDU length supported. */
     uint32_t                    cbPduMax;
+    /** Status code of the last request. */
+    PSPSTS                      rcReqLast;
     /** Size of the scratch space area in bytes. */
     uint32_t                    cbScratch;
     /** Start address of the scratch space area. */
@@ -550,14 +552,20 @@ static int pspStubPduCtxReqResp(PPSPSTUBPDUCTXINT pThis, uint32_t idCcd, PSPSERI
         rc = pspStubPduCtxRecvId(pThis, enmResp, &pPdu, &pvPduResp, &cbPduResp, cMillies);
         if (!rc)
         {
-            if (   pPdu->u.Fields.rcReq == PSP_SERIAL_STS_INF_SUCCESS
-                && cbPduResp == cbResp)
+            pThis->rcReqLast = pPdu->u.Fields.rcReq;
+
+            if (pPdu->u.Fields.rcReq == STS_INF_SUCCESS)
             {
-                if (cbPduResp)
-                    memcpy(pvResp, pvPduResp, cbPduResp);
+                if (cbPduResp == cbResp)
+                {
+                    if (cbPduResp)
+                        memcpy(pvResp, pvPduResp, cbPduResp);
+                }
+                else
+                    rc = STS_ERR_PSP_PROXY_REQ_RESP_PAYLOAD_SZ_MISMATCH;
             }
             else
-                rc = -1;
+                rc = STS_ERR_PSP_PROXY_REQ_COMPLETED_WITH_ERROR;
         }
     }
 
@@ -620,6 +628,7 @@ int pspStubPduCtxCreate(PPSPSTUBPDUCTX phPduCtx, PCPSPPROXYPROV pProvIf, PSPPROX
         pThis->cBeaconsSeen  = 0;
         pThis->cCcds         = 1; /* To make validation succeed during the initial connect phase. */
         pThis->fConnect      = false;
+        pThis->rcReqLast     = STS_INF_SUCCESS;
         pspStubPduCtxRecvReset(pThis);
         *phPduCtx = pThis;
     }
@@ -696,6 +705,15 @@ int pspStubPduCtxQueryInfo(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPADDR *pPspA
     *pPspAddrScratchStart = pThis->PspAddrScratch;
     *pcbScratch           = pThis->cbScratch;
     return 0;
+}
+
+
+int pspStubPduCtxQueryLastReqRc(PSPSTUBPDUCTX hPduCtx, PSPSTS *pReqRcLast)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    *pReqRcLast = pThis->rcReqLast;
+    return STS_INF_SUCCESS;
 }
 
 

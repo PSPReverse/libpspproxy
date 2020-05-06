@@ -189,6 +189,15 @@ void PSPProxyCtxDestroy(PSPPROXYCTX hCtx);
 int PSPProxyCtxPspCcdSet(PSPPROXYCTX hCtx, uint32_t idCcd);
 
 /**
+ * Query the returned status code of the last request.
+ *
+ * @returns Status code of this call.
+ * @param   hCtx                    The PSP proxy context handle.
+ * @param   pReqRcLast              Where to store the status code of the last issued request.
+ */
+int PSPProxyCtxQueryLastReqRc(PSPPROXYCTX hCtx, PSPSTS *pReqRcLast);
+
+/**
  * Reads the register at the given SMN address.
  *
  * @returns Status code.

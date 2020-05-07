@@ -23,6 +23,7 @@ ffibuilder.cdef("""
 typedef int32_t  PSPSTS;
 typedef uint32_t SMNADDR;
 typedef uint32_t PSPADDR;
+typedef uint32_t PSPPADDR;
 typedef uint64_t X86PADDR;
 typedef struct PSPPROXYCTXINT *PSPPROXYCTX;
 typedef PSPPROXYCTX *PPSPPROXYCTX;
@@ -55,6 +56,7 @@ int PSPProxyCtxPspX86MmioRead(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t c
 int PSPProxyCtxPspX86MmioWrite(PSPPROXYCTX hCtx, X86PADDR PhysX86Addr, uint32_t cbVal, const void *pvVal);
 int PSPProxyCtxPspCoProcWrite(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2, uint32_t u32Val);
 int PSPProxyCtxPspCoProcRead(PSPPROXYCTX hCtx, uint8_t idCoProc, uint8_t idCrn, uint8_t idCrm, uint8_t idOpc1, uint8_t idOpc2, uint32_t *pu32Val);
+int PSPProxyCtxBranchTo(PSPPROXYCTX hCtx, PSPPADDR PspAddrPc, bool fThumb, uint32_t *pau32Gprs);
 int PSPProxyCtxPspSvcCall(PSPPROXYCTX hCtx, uint32_t idxSyscall, uint32_t u32R0, uint32_t u32R1, uint32_t u32R2, uint32_t u32R3, uint32_t *pu32R0Return);
 int PSPProxyCtxX86SmnRead(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, void *pvVal);
 int PSPProxyCtxX86SmnWrite(PSPPROXYCTX hCtx, uint16_t idNode, SMNADDR uSmnAddr, uint32_t cbVal, const void *pvVal);

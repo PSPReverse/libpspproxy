@@ -675,3 +675,10 @@ int PSPProxyCtxCodeModExec(PSPPROXYCTX hCtx, uint32_t u32Arg0, uint32_t u32Arg1,
                                        pu32CmRet, cMillies);
 }
 
+int PSPProxyCtxBranchTo(PSPPROXYCTX hCtx, PSPPADDR PspAddrPc, bool fThumb, uint32_t *pau32Gprs)
+{
+    PPSPPROXYCTXINT pThis = hCtx;
+
+    return pspStubPduCtxBranchTo(pThis->hPduCtx, pThis->idCcd, PspAddrPc, fThumb, pau32Gprs);
+}
+

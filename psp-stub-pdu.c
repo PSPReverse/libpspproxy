@@ -876,7 +876,7 @@ int pspStubPduCtxPspMemWrite(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPADDR uPsp
         Req.PspAddrStart = uPspAddr;
         Req.cbXfer       = cbThisWrite;
         rc = pspStubPduCtxReqRespWr(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
-                                    PSPSERIALPDURRNID_REQUEST_PSP_MEM_WRITE,
+                                    PSPSERIALPDURRNID_RESPONSE_PSP_MEM_WRITE,
                                     &Req, sizeof(Req), pbBuf, cbThisWrite, 10000);
         if (!rc)
         {
@@ -1326,5 +1326,22 @@ int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t 
     }
 
     return rc;
+}
+
+
+int pspStubPduCtxBranchTo(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPPADDR PspAddrPc, bool fThumb, uint32_t *pau32Gprs)
+{
+    PPSPSTUBPDUCTXINT pThis = hPduCtx;
+
+    PSPSERIALBRANCHTOREQ Req;
+    Req.u32Flags   = fThumb ? PSP_SERIAL_BRANCH_TO_F_THUMB : 0;
+    Req.PspAddrDst = PspAddrPc;
+    Req.u32Pad0    = 0;
+    memcpy(&Req.au32Gprs[0], pau32Gprs, sizeof(Req.au32Gprs));
+
+    return pspStubPduCtxReqResp(pThis, idCcd, PSPSERIALPDURRNID_REQUEST_BRANCH_TO,
+                                PSPSERIALPDURRNID_RESPONSE_BRANCH_TO,
+                                &Req, sizeof(Req), NULL /*pvRespPayload*/, 0 /*cbRespPayload*/,
+                                10000);
 }
 

@@ -320,4 +320,17 @@ int pspStubPduCtxPspCodeModLoad(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, const voi
 int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t u32Arg0, uint32_t u32Arg1,
                                 uint32_t u32Arg2, uint32_t u32Arg3, uint32_t *pu32CmRet, uint32_t cMillies);
 
+
+/**
+ * Lets the stub branch to the given destination (probably killing the stub).
+ *
+ * @returns Status code.
+ * @param   hPduCtx                 The PDU context handle.
+ * @param   idCcd                   The CCD ID for the request.
+ * @param   PspAddrPc               The address to branch to.
+ * @param   fThumb                  Flag whether to switch to thumb mode.
+ * @param   pau32Gprs               Pointer to the general purpose register values to set up (r0-r12).
+ */
+int pspStubPduCtxBranchTo(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, PSPPADDR PspAddrPc, bool fThumb, uint32_t *pau32Gprs);
+
 #endif /* !__psp_stub_pdu_h */

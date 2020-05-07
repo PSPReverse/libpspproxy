@@ -185,6 +185,13 @@ class PSPProxy(object):
         else:
             return (self.rcLibLast, 0);
 
+    def branchTo(self, uPspAddrPc, fThumb, lstGprs):
+        paGprs = ffi.new("uint32_t[13]");
+        paGprs = lstGprs;
+        self.rcLibLast = lib.PSPProxyCtxBranchTo(self.hCtx, uPspAddrPc, fThumb, paGprs);
+        if self.rcLibLast == 0:
+            return 0;
+
     def writeCoProc(self, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal):
         self.rcLibLast = lib.PSPProxyCtxPspCoProcRead(self.hCtx, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal);
         if self.rcLibLast == 0:

@@ -395,7 +395,7 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
     {
         PCPSPSERIALPDUHDR pPdu = NULL;
         rc = pspStubPduCtxRecv(pThis, &pPdu, cMillies);
-        if (rc == -2)
+        if (rc == STS_ERR_PSP_PROXY_TIMEOUT)
             break;
         if (!rc)
         {
@@ -1200,20 +1200,24 @@ int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pf
                 pThis->afPerCcdIrq[i] = false;
                 pThis->afPerCcdFirq[i] = false;
                 pThis->cCcdsIrqPending--;
-                return 0;
+                return STS_INF_SUCCESS;
             }
         }
     }
 
-    /* Nothing received, so wait for one. */
-    PCPSPSERIALPDUHDR pPdu = NULL;
-    int rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_IRQ, &pPdu,
-                                 NULL /*ppvPayload*/, 0 /*pcbPayload*/, cWaitMs);
-    if (!rc)
+    int rc = STS_INF_SUCCESS;
+    if (cWaitMs)
     {
-        *pidCcd = pPdu->u.Fields.idCcd;
-        *pfIrq  = true;
-        *pfFirq = false;
+        /* Nothing received, so wait for one. */
+        PCPSPSERIALPDUHDR pPdu = NULL;
+        rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_IRQ, &pPdu,
+                                 NULL /*ppvPayload*/, 0 /*pcbPayload*/, cWaitMs);
+        if (!rc)
+        {
+            *pidCcd = pPdu->u.Fields.idCcd;
+            *pfIrq  = true;
+            *pfFirq = false;
+        }
     }
 
     return rc;
@@ -1295,7 +1299,7 @@ int pspStubPduCtxPspCodeModExec(PSPSTUBPDUCTX hPduCtx, uint32_t idCcd, uint32_t 
                     break;
                 }
             }
-            else if (rc == -2)
+            else if (rc == STS_ERR_PSP_PROXY_TIMEOUT)
             {
                 /* Nothing received for now, check input. */
                 rc = 0;

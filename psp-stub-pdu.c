@@ -42,6 +42,8 @@ typedef enum PSPSERIALPDURECVSTATE
 {
     /** Invalid receive state. */
     PSPSERIALPDURECVSTATE_INVALID = 0,
+    /** Waiting for the magic. */
+    PSPSERIALPDURECVSTATE_MAGIC,
     /** Currently receiveing the header. */
     PSPSERIALPDURECVSTATE_HDR,
     /** Currently receiveing the payload. */
@@ -102,8 +104,10 @@ typedef struct PSPSTUBPDUCTXINT
     char                        achLogMsg[1024];
     /** Number of bytes valid in the log message buffer. */
     size_t                      cchLogMsgAvail;
-    /** Number of CCDs which have at least one of the IRQ/FIRQ flags set. */
-    uint32_t                    cCcdsIrqPending;
+    /** Number of CCDs for which we received a IRQ status change notification. */
+    uint32_t                    cCcdsIrqChange;
+    /** Array of per CCD IRQ notification received since last time flag. */
+    bool                        afPerCcdIrqNotRcvd[PSP_CCDS_MAX];
     /** Array of per CCD IRQ flags. */
     bool                        afPerCcdIrq[PSP_CCDS_MAX];
     /** Array of per CCD FIRQ flags. */
@@ -122,8 +126,8 @@ typedef PSPSTUBPDUCTXINT *PPSPSTUBPDUCTXINT;
  */
 static void pspStubPduCtxRecvReset(PPSPSTUBPDUCTXINT pThis)
 {
-    pThis->enmPduRecvState = PSPSERIALPDURECVSTATE_HDR;
-    pThis->cbPduRecvLeft   = sizeof(PSPSERIALPDUHDR);
+    pThis->enmPduRecvState = PSPSERIALPDURECVSTATE_MAGIC;
+    pThis->cbPduRecvLeft   = sizeof(uint32_t); //sizeof(PSPSERIALPDUHDR);
     pThis->offPduRecv      = 0;
 }
 
@@ -201,6 +205,24 @@ static int pspStubPduCtxRecvAdvance(PPSPSTUBPDUCTXINT pThis, PCPSPSERIALPDUHDR *
 
     switch (pThis->enmPduRecvState)
     {
+        case PSPSERIALPDURECVSTATE_MAGIC:
+        {
+            if (*(uint32_t *)&pThis->abPdu[0] == PSP_SERIAL_PSP_2_EXT_PDU_START_MAGIC)
+            {
+                pThis->enmPduRecvState = PSPSERIALPDURECVSTATE_HDR;
+                pThis->cbPduRecvLeft   = sizeof(PSPSERIALPDUHDR) - sizeof(uint32_t); /* Magic was already received. */
+            }
+            else
+            {
+                /* Remove the first byte and teceive the next byte (the last 3 bytes could belong to the magic). */
+                pThis->abPdu[0] = pThis->abPdu[1];
+                pThis->abPdu[1] = pThis->abPdu[2];
+                pThis->abPdu[2] = pThis->abPdu[3];
+                pThis->cbPduRecvLeft   = 1;
+                pThis->offPduRecv      = 3;
+            }
+            break;
+        }
         case PSPSERIALPDURECVSTATE_HDR:
         {
             /* Validate header. */
@@ -418,13 +440,16 @@ static int pspStubPduCtxRecvId(PPSPSTUBPDUCTXINT pThis, PSPSERIALPDURRNID enmRrn
                 else if (pPdu->u.Fields.enmRrnId == PSPSERIALPDURRNID_NOTIFICATION_IRQ)
                 {
                     uint32_t idCcd = pPdu->u.Fields.idCcd;
-                    /** @todo FIRQ handling. */
+                    PCPSPSERIALIRQNOT pIrqNot = (PCPSPSERIALIRQNOT)(pPdu + 1);
+
                     if (idCcd < PSP_CCDS_MAX)
                     {
-                        if (!pThis->afPerCcdIrq[idCcd])
+                        if (!pThis->afPerCcdIrqNotRcvd[idCcd])
                         {
-                            pThis->afPerCcdIrq[idCcd] = true;
-                            pThis->cCcdsIrqPending++;
+                            pThis->afPerCcdIrqNotRcvd[idCcd] = true;
+                            pThis->afPerCcdIrq[idCcd] = (pIrqNot->fIrqCur & PSP_SERIAL_NOTIFICATION_IRQ_PENDING_IRQ)  ? true : false;
+                            pThis->afPerCcdFirq[idCcd] = (pIrqNot->fIrqCur & PSP_SERIAL_NOTIFICATION_IRQ_PENDING_FIQ) ? true : false;
+                            pThis->cCcdsIrqChange++;
                         }
                     }
                     else
@@ -1184,22 +1209,20 @@ int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pf
 {
     PPSPSTUBPDUCTXINT pThis = hPduCtx;
 
-    /* Check for a pending IRQ we received earlier. */
-    if (pThis->cCcdsIrqPending)
+    /* Check for a pending IRQ notification we received earlier. */
+    if (pThis->cCcdsIrqChange)
     {
         for (uint32_t i = 0; i < PSP_CCDS_MAX; i++)
         {
-            if (    pThis->afPerCcdIrq[i]
-                || pThis->afPerCcdFirq[i])
+            if (pThis->afPerCcdIrqNotRcvd[i])
             {
                 *pidCcd = i;
                 *pfIrq = pThis->afPerCcdIrq[i];
                 *pfFirq = pThis->afPerCcdFirq[i];
 
                 /* Reset */
-                pThis->afPerCcdIrq[i] = false;
-                pThis->afPerCcdFirq[i] = false;
-                pThis->cCcdsIrqPending--;
+                pThis->afPerCcdIrqNotRcvd[i] = false;
+                pThis->cCcdsIrqChange--;
                 return STS_INF_SUCCESS;
             }
         }
@@ -1210,13 +1233,20 @@ int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pf
     {
         /* Nothing received, so wait for one. */
         PCPSPSERIALPDUHDR pPdu = NULL;
+        PCPSPSERIALIRQNOT pIrqNot;
+        size_t cbIrqNot;
         rc = pspStubPduCtxRecvId(pThis, PSPSERIALPDURRNID_NOTIFICATION_IRQ, &pPdu,
-                                 NULL /*ppvPayload*/, 0 /*pcbPayload*/, cWaitMs);
+                                 (void **)&pIrqNot, &cbIrqNot, cWaitMs);
         if (!rc)
         {
-            *pidCcd = pPdu->u.Fields.idCcd;
-            *pfIrq  = true;
-            *pfFirq = false;
+            if (cbIrqNot == sizeof(*pIrqNot))
+            {
+                *pidCcd = pPdu->u.Fields.idCcd;
+                *pfIrq  = (pIrqNot->fIrqCur & PSP_SERIAL_NOTIFICATION_IRQ_PENDING_IRQ) ? true : false;
+                *pfFirq = (pIrqNot->fIrqCur & PSP_SERIAL_NOTIFICATION_IRQ_PENDING_FIQ) ? true : false;
+            }
+            else
+                rc = STS_ERR_INVALID_PARAMETER;
         }
     }
 

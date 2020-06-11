@@ -8,7 +8,7 @@ ffibuilder = FFI()
 cpp_path = Path("..").resolve()
 libpspproxy_lib_path = cpp_path.joinpath("libpspproxy.a")
 libpspproxy_include_path = cpp_path.joinpath(".")
-libpspproxy_include_path2 = cpp_path.joinpath("../psp-includes")
+libpspproxy_include_path2 = cpp_path.joinpath("./psp-includes")
 
 ffibuilder.set_source(
     "_pypspproxy",

@@ -193,7 +193,7 @@ class PSPProxy(object):
             return 0;
 
     def writeCoProc(self, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal):
-        self.rcLibLast = lib.PSPProxyCtxPspCoProcRead(self.hCtx, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal);
+        self.rcLibLast = lib.PSPProxyCtxPspCoProcWrite(self.hCtx, idCoProc, idCrn, idCrm, idOpc1, idOpc2, uVal);
         if self.rcLibLast == 0:
             return 0;
         else:

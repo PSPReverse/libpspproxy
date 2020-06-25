@@ -1248,7 +1248,11 @@ int pspStubPduCtxPspWaitForIrq(PSPSTUBPDUCTX hPduCtx, uint32_t *pidCcd, bool *pf
             else
                 rc = STS_ERR_INVALID_PARAMETER;
         }
+        else if (rc == STS_ERR_PSP_PROXY_TIMEOUT)
+            rc = STS_ERR_PSP_PROXY_WFI_NO_CHANGE;
     }
+    else
+        rc = STS_ERR_PSP_PROXY_WFI_NO_CHANGE;
 
     return rc;
 }

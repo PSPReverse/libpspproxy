@@ -103,7 +103,7 @@ static int cmToolProxyIoIfOutBufWrite(PSPPROXYCTX hCtx, void *pvUser, uint32_t i
 {
     if (idOutBuf == 0)
     {
-        printf("%.*s", cbBuf, (const char *)pvBuf);
+        printf("%.*s", (int)cbBuf, (const char *)pvBuf);
         fflush(stdout);
     }
 
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
         free(pv);
     }
     else
-        printf("Loading the file \"%s\" failed with %d\n", argv[2]);
+        printf("Loading the file \"%s\" failed with %d\n", argv[2], rc);
 
     return rc;
 }
